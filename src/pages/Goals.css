@@ -1,0 +1,565 @@
+.goals-page {
+  padding: var(--container-padding);
+  padding-top: calc(env(safe-area-inset-top, 20px) + 24px);
+  padding-bottom: calc(var(--nav-height) + 60px);
+  max-width: var(--max-width);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.goals-page__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.goals-page__header h1 {
+  font-size: var(--headline-lg-mobile-size);
+  font-weight: var(--headline-lg-mobile-weight);
+  color: var(--color-on-surface);
+  letter-spacing: -0.02em;
+}
+
+.goals-page__add-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-full);
+  background: var(--color-primary);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-md);
+  border: none;
+  transition: all var(--transition-base);
+}
+
+.goals-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.currency-view-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-full);
+  background: var(--color-surface-container-low);
+  border: 1px solid var(--color-glass-border);
+  color: var(--color-text-secondary);
+  font-weight: 800;
+  font-size: calc(14px + var(--font-size-offset, 0px));
+  transition: all var(--transition-base);
+}
+
+.currency-view-toggle.active {
+  background: var(--color-primary);
+  color: white;
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-md);
+}
+
+.currency-view-toggle:active {
+  transform: scale(0.95);
+}
+
+/* ── Goal Form Glass ── */
+.goal-form-glass {
+  background: var(--color-glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--color-glass-border);
+  border-radius: var(--radius-2xl);
+  padding: var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  box-shadow: var(--shadow-glass);
+}
+
+.goal-form-glass h3 {
+  font-size: calc(18px + var(--font-size-offset, 0px));
+  font-weight: 700;
+  color: var(--color-on-surface);
+}
+
+.goal-form__input {
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-container-low);
+  font-size: calc(15px + var(--font-size-offset, 0px));
+  color: var(--color-on-surface);
+  border: 1px solid var(--color-glass-border);
+  transition: all var(--transition-base);
+}
+
+.goal-form__input:focus {
+  border-color: var(--color-primary);
+  background: var(--color-surface-container-lowest);
+  outline: none;
+}
+
+.goal-form__row {
+  display: flex;
+  gap: 10px;
+}
+
+.goal-form__select {
+  padding: 0 12px;
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-container-low);
+  border: 1px solid var(--color-glass-border);
+  color: var(--color-on-surface);
+  font-weight: 600;
+}
+
+.goal-form__section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.goal-form__label {
+  font-size: calc(12px + var(--font-size-offset, 0px));
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
+  letter-spacing: 0.05em;
+  padding-left: 4px;
+}
+
+.goal-form__emojis {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.goal-form__emoji-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-lg);
+  font-size: calc(20px + var(--font-size-offset, 0px));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-surface-container-low);
+  border: 2px solid transparent;
+  transition: all var(--transition-base);
+}
+
+.goal-form__emoji-btn--active {
+  background: var(--color-surface-container-lowest);
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.goal-form__colors {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.goal-form__color-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-full);
+  border: 3px solid transparent;
+  transition: all var(--transition-base);
+}
+
+.goal-form__color-btn--active {
+  border-color: var(--color-on-surface);
+  transform: scale(1.2);
+}
+
+.goal-form__actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.goal-form__cancel {
+  flex: 1;
+  padding: 12px;
+  border-radius: var(--radius-lg);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  background: var(--color-surface-container-low);
+  border: none;
+}
+
+.goal-form__submit {
+  flex: 2;
+  padding: 12px;
+  border-radius: var(--radius-lg);
+  font-weight: 700;
+  color: white;
+  background: var(--color-primary);
+  border: none;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+}
+
+/* ── Goal Card Glass ── */
+.goals-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.goal-card-glass {
+  background: var(--color-glass);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--color-glass-border);
+  border-radius: var(--radius-2xl);
+  padding: var(--space-lg);
+  box-shadow: var(--shadow-glass);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Removed accent bar */
+
+.goal-card__header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.goal-card__emoji-container {
+  width: 52px;
+  height: 52px;
+  border-radius: var(--radius-xl);
+  background: color-mix(in srgb, var(--goal-color) 15%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(26px + var(--font-size-offset, 0px));
+  flex-shrink: 0;
+}
+
+.goal-card__info {
+  flex: 1;
+  min-width: 0;
+}
+
+.goal-card__title {
+  font-size: calc(16px + var(--font-size-offset, 0px));
+  font-weight: 700;
+  color: var(--color-on-surface);
+  margin-bottom: 2px;
+}
+
+.goal-card__amounts {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.goal-card__current {
+  font-size: calc(14px + var(--font-size-offset, 0px));
+  font-weight: 700;
+  color: var(--color-on-surface);
+}
+
+.goal-card__target {
+  font-size: calc(12px + var(--font-size-offset, 0px));
+  color: var(--color-text-tertiary);
+  font-weight: 500;
+}
+
+.goal-card__percent {
+  font-size: calc(18px + var(--font-size-offset, 0px));
+  font-weight: 800;
+  color: var(--goal-color);
+  letter-spacing: -0.02em;
+}
+
+.goal-card__progress-container {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.goal-card__progress-track {
+  height: 10px;
+  background: var(--color-surface-container-low);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.goal-card__progress-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  background: var(--goal-color);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--goal-color) 40%, transparent);
+  transition: width 1s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.goal-card__actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.goal-card__add-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: var(--radius-lg);
+  font-size: calc(13px + var(--font-size-offset, 0px));
+  font-weight: 700;
+  background: var(--color-surface-container-low);
+  color: var(--color-on-surface);
+  border: 1px solid var(--color-glass-border);
+  transition: all var(--transition-base);
+}
+
+.goal-card__add-btn:active {
+  background: var(--color-surface-container-high);
+}
+
+.goal-card__delete-btn {
+  margin-left: auto;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-tertiary);
+  background: transparent;
+  border: none;
+  transition: all var(--transition-base);
+}
+
+.goal-card__delete-btn:active {
+  color: var(--color-error);
+  background: color-mix(in srgb, var(--color-error) 10%, transparent);
+}
+
+/* Inline Add Amount Form */
+.goal-add-inline {
+  display: flex;
+  gap: 8px;
+  flex: 1;
+}
+
+.goal-add-input {
+  flex: 1;
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-container-low);
+  border: 1px solid var(--color-glass-border);
+  color: var(--color-on-surface);
+  font-size: calc(14px + var(--font-size-offset, 0px));
+  font-weight: 600;
+}
+
+.goal-add-confirm {
+  padding: 0 16px;
+  border-radius: var(--radius-md);
+  background: var(--goal-color);
+  color: white;
+  font-weight: 700;
+  font-size: calc(13px + var(--font-size-offset, 0px));
+  border: none;
+}
+
+.goal-add-cancel {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-secondary);
+}
+
+@keyframes progressFill {
+  from { width: 0; }
+}
+
+/* ── Tab Toggle ── */
+.goals-tab-toggle {
+  display: flex;
+  gap: 8px;
+  background: var(--color-surface-container-low);
+  border-radius: var(--radius-xl);
+  padding: 5px;
+  border: 1px solid var(--color-glass-border);
+}
+
+.goals-tab-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 11px 16px;
+  border-radius: var(--radius-lg);
+  border: none;
+  font-size: calc(14px + var(--font-size-offset, 0px));
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  background: transparent;
+  transition: all var(--transition-base);
+}
+
+.goals-tab-btn--active {
+  background: var(--color-primary);
+  color: white;
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--color-primary) 35%, transparent);
+}
+
+/* ── Fund Summary Card ── */
+.fund-summary-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--color-glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--color-glass-border);
+  border-radius: var(--radius-2xl);
+  padding: 18px 20px;
+  box-shadow: var(--shadow-glass);
+}
+
+.fund-summary__icon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-xl);
+  background: var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--color-primary) 35%, transparent);
+}
+
+.fund-summary__content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.fund-summary__label {
+  font-size: calc(12px + var(--font-size-offset, 0px));
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-tertiary);
+}
+
+.fund-summary__amounts {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.fund-summary__value {
+  font-size: calc(18px + var(--font-size-offset, 0px));
+  font-weight: 800;
+  color: var(--color-on-surface);
+  letter-spacing: -0.03em;
+}
+
+.fund-summary__value--usd {
+  color: var(--color-primary);
+}
+
+/* ── Fund Card ── */
+.fund-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--color-glass);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--color-glass-border);
+  border-left: 4px solid var(--fund-color);
+  border-radius: var(--radius-2xl);
+  padding: 18px 16px 18px 18px;
+  box-shadow: var(--shadow-glass);
+  transition: all var(--transition-base);
+}
+
+.fund-card:active {
+  transform: scale(0.98);
+}
+
+.fund-card__left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex: 1;
+  min-width: 0;
+}
+
+.fund-card__emoji-container {
+  width: 46px;
+  height: 46px;
+  border-radius: var(--radius-xl);
+  background: color-mix(in srgb, var(--fund-color) 15%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(22px + var(--font-size-offset, 0px));
+  flex-shrink: 0;
+}
+
+.fund-card__info {
+  flex: 1;
+  min-width: 0;
+}
+
+.fund-card__title {
+  font-size: calc(15px + var(--font-size-offset, 0px));
+  font-weight: 700;
+  color: var(--color-on-surface);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fund-card__currency {
+  font-size: calc(11px + var(--font-size-offset, 0px));
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--fund-color);
+  margin-top: 2px;
+}
+
+.fund-card__right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.fund-card__amount {
+  font-size: calc(16px + var(--font-size-offset, 0px));
+  font-weight: 800;
+  color: var(--color-on-surface);
+  letter-spacing: -0.02em;
+}
+
+.fund-card__actions {
+  display: flex;
+  gap: 4px;
+}

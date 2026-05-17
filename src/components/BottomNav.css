@@ -1,0 +1,88 @@
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: var(--z-nav);
+  background: rgba(var(--color-surface-rgb, 255, 255, 255), 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-top: 1px solid var(--color-outline-variant);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+[data-theme='dark'] .bottom-nav {
+  background: rgba(18, 18, 18, 0.85);
+  border-top-color: rgba(255, 255, 255, 0.1);
+}
+
+.bottom-nav__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  max-width: var(--max-width);
+  margin: 0 auto;
+  height: var(--nav-height);
+  padding: 0 var(--space-sm);
+  position: relative;
+}
+
+.bottom-nav__tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-lg);
+  color: var(--color-text-secondary);
+  transition: all var(--transition-base);
+  position: relative;
+  -webkit-tap-highlight-color: transparent;
+  min-width: 60px;
+}
+
+.bottom-nav__tab--active {
+  color: var(--color-primary);
+}
+
+.bottom-nav__label {
+  font-size: calc(11px + var(--font-size-offset, 0px));
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+.bottom-nav__tab--active .bottom-nav__label {
+  font-weight: 600;
+}
+
+/* ── Fixed FAB ── */
+.fab-fixed {
+  position: fixed;
+  bottom: calc(var(--nav-height) + 24px + env(safe-area-inset-bottom, 0px));
+  right: 24px;
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-full);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-elevated);
+  z-index: var(--z-fab);
+  border: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.fab-fixed:active,
+.fab-fixed--pressed {
+  transform: scale(0.9);
+  box-shadow: 0 4px 16px rgba(27, 107, 79, 0.3);
+}
+
+@media (min-width: 520px) {
+  .fab-fixed {
+    right: calc(50% - 240px + 24px);
+  }
+}
