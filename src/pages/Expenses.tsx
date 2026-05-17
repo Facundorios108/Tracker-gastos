@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { Search, Trash2, Pencil, CreditCard, Banknote, Landmark, Smartphone } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { getCategoryConfig } from '../types';
-import { formatCurrency, formatDateFull, getUniqueMonths, isDateInRange } from '../utils';
+import { formatDateFull, getUniqueMonths, isDateInRange } from '../utils';
 import './Expenses.css';
 
 interface ExpensesProps {
@@ -11,7 +11,7 @@ interface ExpensesProps {
 }
 
 export default function Expenses({ onEdit, initialFilters }: ExpensesProps) {
-  const { state, deleteTransaction } = useApp();
+  const { state, deleteTransaction, convertToDisplay, formatCurrency } = useApp();
   const [search, setSearch] = useState('');
   const [filterCategory, setFilterCategory] = useState<string | null>(null);
   const [filterPaymentMethod, setFilterPaymentMethod] = useState<string | null>(null);
@@ -83,7 +83,7 @@ export default function Expenses({ onEdit, initialFilters }: ExpensesProps) {
         dateKey,
         dateLabel: formatDateFull(items[0].date),
         items,
-        total: items.reduce((s, t) => s + t.amount, 0),
+        total: items.reduce((s, t) => s + convertToDisplay(t.amount, t.currency), 0),
       });
     });
     return groups;
@@ -280,19 +280,18 @@ export default function Expenses({ onEdit, initialFilters }: ExpensesProps) {
                         <span className="transaction-item__category">{cat.label}</span>
                         <span className="transaction-item__dot">·</span>
                         <span className="transaction-item__method">
-                          {t.paymentMethod === 'credit' && '💳 '}
-                          {t.paymentMethod === 'debit' && '🏦 '}
-                          {t.paymentMethod === 'cash' && '💵 '}
-                          {t.paymentMethod === 'transfer' && '📱 '}
-                          {t.paymentMethod ? (t.paymentMethod.charAt(0).toUpperCase() + t.paymentMethod.slice(1)) : 'Efectivo'}
+                          {t.paymentMethod === 'credit' ? 'Crédito' : 
+                           t.paymentMethod === 'debit' ? 'Débito' : 
+                           t.paymentMethod === 'cash' ? 'Efectivo' : 
+                           t.paymentMethod === 'transfer' ? 'Transferencia' : 'Efectivo'}
                         </span>
                       </div>
                     </div>
                     <div className="transaction-amount-wrapper">
-                      {t.currency === 'USD' && <span className="currency-badge-premium">USD</span>}
                       <div className="transaction-item__amount transaction-item__amount--expense">
                         -{formatCurrency(t.amount, t.currency)}
                       </div>
+                      {t.currency === 'USD' && <span className="currency-badge-premium">USD</span>}
                     </div>
                     <div className="transaction-item__actions">
                       <button

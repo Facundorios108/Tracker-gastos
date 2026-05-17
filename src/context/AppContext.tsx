@@ -28,14 +28,24 @@ const defaultSettings: UserSettings = {
   }
 };
 
+const getInitialSettings = (): UserSettings => {
+  try {
+    const local = localStorage.getItem('app_settings');
+    if (local) return { ...defaultSettings, ...JSON.parse(local) };
+  } catch (e) {}
+  return defaultSettings;
+};
+
 const defaultState: AppState = {
   transactions: [],
   goals: [],
   funds: [],
-  settings: defaultSettings,
+  settings: getInitialSettings(),
   user: null,
   isLoading: true,
 };
+
+let settingsSaveTimeout: any = null;
 
 /* ── Actions ── */
 
@@ -124,7 +134,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const unsubSettings = onSnapshot(settingsRef, (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
-        dispatch({ type: 'SET_SETTINGS', payload: data.settings });
+        const merged = { ...defaultSettings, ...data.settings };
+        localStorage.setItem('app_settings', JSON.stringify(merged));
+        dispatch({ type: 'SET_SETTINGS', payload: merged });
       } else {
         // Init default settings in Firestore if new user
         setDoc(settingsRef, { settings: defaultSettings }, { merge: true });
@@ -256,7 +268,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const updateSettings = async (nextSettings: Partial<UserSettings>) => {
     if (!state.user) return;
     const mergedSettings = { ...state.settings, ...nextSettings };
-    await setDoc(doc(db, 'users', state.user.uid), { settings: mergedSettings }, { merge: true });
+    
+    dispatch({ type: 'SET_SETTINGS', payload: nextSettings });
+    localStorage.setItem('app_settings', JSON.stringify(mergedSettings));
+
+    if (settingsSaveTimeout) clearTimeout(settingsSaveTimeout);
+    settingsSaveTimeout = setTimeout(() => {
+      setDoc(doc(db, 'users', state.user.uid), { settings: mergedSettings }, { merge: true }).catch(console.error);
+    }, 1000);
   };
 
   const clearAllData = async () => {
@@ -290,19 +309,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
+    if (!state.user) return;
     const fetchRate = async () => {
       try {
         const response = await fetch('https://dolarapi.com/v1/dolares/oficial');
         const data = await response.json();
         if (data && data.venta) {
-          dispatch({ type: 'SET_EXCHANGE_RATE', payload: data.venta });
+          updateSettings({ exchangeRate: data.venta });
         }
       } catch (error) {
         console.error('Error fetching exchange rate:', error);
       }
     };
     fetchRate();
-  }, []);
+  }, [state.user?.uid]);
 
   const { displayCurrency, exchangeRate } = state.settings;
 

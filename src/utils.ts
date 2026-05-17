@@ -82,5 +82,8 @@ export function getCurrentMonthRange(): { start: string; end: string } {
 }
 
 export function isDateInRange(date: string, start: string, end: string): boolean {
-  return date >= start && date <= end;
+  const t = new Date(date).getTime();
+  const s = new Date(`${start}T00:00:00`).getTime();
+  const e = new Date(`${end}T23:59:59.999`).getTime();
+  return t >= s && t <= e;
 }

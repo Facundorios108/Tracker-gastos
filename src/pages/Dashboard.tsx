@@ -15,18 +15,18 @@ interface DashboardProps {
 }
 
 export default function Dashboard({ onNavigate, onEdit }: DashboardProps) {
-  const { state, monthlyIncome, monthlyExpenses, monthlyBalance, formatCurrency, updateSettings } = useApp();
+  const { state, monthlyIncome, monthlyExpenses, monthlyBalance, formatCurrency, convertToDisplay, updateSettings } = useApp();
 
   const [isEditingBudget, setIsEditingBudget] = useState(false);
-  const [tempBudget, setTempBudget] = useState(state.settings.monthlyBudget.toString());
+  const [tempBudget, setTempBudget] = useState(state.settings.monthlyBudget ? state.settings.monthlyBudget.toLocaleString('es-AR') : '0');
 
   const handleEditBudget = () => {
-    setTempBudget(state.settings.monthlyBudget.toString());
+    setTempBudget(state.settings.monthlyBudget ? state.settings.monthlyBudget.toLocaleString('es-AR') : '0');
     setIsEditingBudget(true);
   };
 
   const saveBudget = () => {
-    const val = parseFloat(tempBudget);
+    const val = parseFloat(tempBudget.replace(/\./g, ''));
     if (!isNaN(val) && val >= 0) {
       updateSettings({ monthlyBudget: val });
       setIsEditingBudget(false);
@@ -44,10 +44,11 @@ export default function Dashboard({ onNavigate, onEdit }: DashboardProps) {
 
     const byCategory = new Map<string, number>();
     monthExpenses.forEach(t => {
-      byCategory.set(t.category, (byCategory.get(t.category) || 0) + t.amount);
+      const displayAmount = convertToDisplay(t.amount, t.currency);
+      byCategory.set(t.category, (byCategory.get(t.category) || 0) + displayAmount);
     });
 
-    const total = monthExpenses.reduce((s, t) => s + t.amount, 0);
+    const total = Array.from(byCategory.values()).reduce((sum, val) => sum + val, 0);
     return Array.from(byCategory.entries())
       .map(([catId, amount]) => ({
         ...getCategoryConfig(catId),
@@ -128,10 +129,14 @@ export default function Dashboard({ onNavigate, onEdit }: DashboardProps) {
               <div className="budget-input-container">
                 <span className="budget-currency-symbol">{state.settings.displayCurrency === 'ARS' ? '$' : 'u$s'}</span>
                 <input 
-                  type="number" 
+                  type="text" 
+                  inputMode="numeric"
                   className="budget-input-field"
                   value={tempBudget}
-                  onChange={e => setTempBudget(e.target.value)}
+                  onChange={e => {
+                    const val = e.target.value.replace(/\D/g, '');
+                    setTempBudget(val ? parseInt(val, 10).toLocaleString('es-AR') : '');
+                  }}
                   autoFocus
                 />
               </div>
@@ -165,7 +170,7 @@ export default function Dashboard({ onNavigate, onEdit }: DashboardProps) {
             <div className="balance-card__stat-icon">
               <TrendingUp size={20} color="#4ade80" />
             </div>
-            <div>
+            <div style={{ minWidth: 0, flex: 1 }}>
               <div className="balance-card__stat-label">Ingresos</div>
               <div className="balance-card__stat-value">{formatCurrency(monthlyIncome)}</div>
             </div>
@@ -174,7 +179,7 @@ export default function Dashboard({ onNavigate, onEdit }: DashboardProps) {
             <div className="balance-card__stat-icon">
               <TrendingDown size={20} color="#f87171" />
             </div>
-            <div>
+            <div style={{ minWidth: 0, flex: 1 }}>
               <div className="balance-card__stat-label">Gastos</div>
               <div className="balance-card__stat-value">{formatCurrency(monthlyExpenses)}</div>
             </div>
@@ -240,7 +245,7 @@ export default function Dashboard({ onNavigate, onEdit }: DashboardProps) {
                   </div>
                   <div className="transaction-value-box">
                     <div className={`transaction-amount-premium ${t.type}`}>
-                      {t.type === 'income' ? '+' : '-'}{formatCurrency(t.amount)}
+                      {t.type === 'income' ? '+' : '-'}{formatCurrency(t.amount, t.currency)}
                     </div>
                     {t.currency === 'USD' && <span className="currency-tag">USD</span>}
                   </div>

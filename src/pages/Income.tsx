@@ -216,19 +216,18 @@ export default function Income({ onEdit, initialFilters }: IncomeProps) {
                         <span className="income-item__category">{cat.label}</span>
                         <span className="income-item__dot">·</span>
                         <span className="income-item__method">
-                          {t.paymentMethod === 'credit' && '💳 '}
-                          {t.paymentMethod === 'debit' && '🏦 '}
-                          {t.paymentMethod === 'cash' && '💵 '}
-                          {t.paymentMethod === 'transfer' && '📱 '}
-                          {t.paymentMethod ? (t.paymentMethod.charAt(0).toUpperCase() + t.paymentMethod.slice(1)) : 'Efectivo'}
+                          {t.paymentMethod === 'credit' ? 'Crédito' : 
+                           t.paymentMethod === 'debit' ? 'Débito' : 
+                           t.paymentMethod === 'cash' ? 'Efectivo' : 
+                           t.paymentMethod === 'transfer' ? 'Transferencia' : 'Efectivo'}
                         </span>
                       </div>
                     </div>
                     <div className="income-amount-section">
-                      {t.currency === 'USD' && <span className="currency-badge-glass">USD</span>}
                       <div className="income-item__amount">
                         +{appFormatCurrency(t.amount, t.currency)}
                       </div>
+                      {t.currency === 'USD' && <span className="currency-badge-glass">USD</span>}
                     </div>
                     <div className="income-item__actions">
                       <button

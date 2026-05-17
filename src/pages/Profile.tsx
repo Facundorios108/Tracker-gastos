@@ -16,11 +16,12 @@ export default function Profile() {
   const settings = state?.settings;
   const user = state?.user;
 
-  const [exchangeRateInput, setExchangeRateInput] = useState(settings?.exchangeRate?.toString() || '1100');
-  const [budgetInput, setBudgetInput] = useState(settings?.monthlyBudget?.toString() || '500000');
+  const [exchangeRateInput, setExchangeRateInput] = useState(settings?.exchangeRate ? settings.exchangeRate.toLocaleString('es-AR') : '1.100');
+  const [budgetInput, setBudgetInput] = useState(settings?.monthlyBudget ? settings.monthlyBudget.toLocaleString('es-AR') : '500.000');
 
   const [isEditingName, setIsEditingName] = useState(false);
-  const [newName, setNewName] = useState(settings?.name || '');
+  const getDisplayName = () => (settings?.name && settings.name !== 'Invitado') ? settings.name : (user?.displayName || user?.email?.split('@')[0] || '');
+  const [newName, setNewName] = useState(getDisplayName());
 
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
@@ -63,21 +64,19 @@ export default function Profile() {
   // Keep inputs in sync with state updates
   useEffect(() => {
     if (settings?.exchangeRate) {
-      setExchangeRateInput(settings.exchangeRate.toString());
+      setExchangeRateInput(settings.exchangeRate.toLocaleString('es-AR'));
     }
   }, [settings?.exchangeRate]);
 
   useEffect(() => {
     if (settings?.monthlyBudget !== undefined) {
-      setBudgetInput(settings.monthlyBudget.toString());
+      setBudgetInput(settings.monthlyBudget.toLocaleString('es-AR'));
     }
   }, [settings?.monthlyBudget]);
 
   useEffect(() => {
-    if (settings?.name) {
-      setNewName(settings.name);
-    }
-  }, [settings?.name]);
+    setNewName(getDisplayName());
+  }, [settings?.name, user?.displayName, user?.email]);
 
   if (!settings || !user) {
     return (
@@ -96,14 +95,14 @@ export default function Profile() {
   };
 
   const handleUpdateExchangeRate = () => {
-    const rate = parseFloat(exchangeRateInput);
+    const rate = parseFloat(exchangeRateInput.replace(/\./g, ''));
     if (!isNaN(rate) && rate > 0) {
       updateSettings({ exchangeRate: rate });
     }
   };
 
   const handleUpdateBudget = () => {
-    const budget = parseFloat(budgetInput);
+    const budget = parseFloat(budgetInput.replace(/\./g, ''));
     if (!isNaN(budget) && budget >= 0) {
       updateSettings({ monthlyBudget: budget });
     }
@@ -166,14 +165,18 @@ export default function Profile() {
               ) : (
                 <div className="name-display-row bounce-effect" onClick={() => setIsEditingName(true)}>
                   <h2 className="user-identity-card__name">
-                    {settings.name || user.displayName || user.email?.split('@')[0] || 'Usuario Premium'}
+                    {getDisplayName() || 'Usuario Premium'}
                   </h2>
                   <Edit2 size={14} className="edit-icon-small" />
                 </div>
               )}
               <p className="user-identity-card__email">{user.email}</p>
               <div className="user-identity-card__badge-row">
-                <span className="user-identity-card__badge">Miembro Fundador</span>
+                {user.email === 'facundomatiasrios108@gmail.com' ? (
+                  <span className="user-identity-card__badge">Miembro Fundador</span>
+                ) : (
+                  <span className="user-identity-card__badge" style={{ background: 'var(--color-primary)', color: '#fff' }}>Level 1</span>
+                )}
                 <span className="user-identity-card__id">ID: {user.uid.substring(0, 8).toUpperCase()}</span>
               </div>
             </div>
@@ -359,9 +362,13 @@ export default function Profile() {
                 <div className="input-with-symbol">
                   <span className="symbol">$</span>
                   <input
-                    type="number"
+                    type="text"
+                    inputMode="numeric"
                     value={exchangeRateInput}
-                    onChange={(e) => setExchangeRateInput(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, '');
+                      setExchangeRateInput(val ? parseInt(val, 10).toLocaleString('es-AR') : '');
+                    }}
                     onBlur={handleUpdateExchangeRate}
                   />
                 </div>
@@ -377,9 +384,13 @@ export default function Profile() {
                 <div className="input-with-symbol">
                   <span className="symbol">{settings.displayCurrency === 'ARS' ? '$' : 'u$s'}</span>
                   <input
-                    type="number"
+                    type="text"
+                    inputMode="numeric"
                     value={budgetInput}
-                    onChange={(e) => setBudgetInput(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, '');
+                      setBudgetInput(val ? parseInt(val, 10).toLocaleString('es-AR') : '');
+                    }}
                     onBlur={handleUpdateBudget}
                   />
                 </div>

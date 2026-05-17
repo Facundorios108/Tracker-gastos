@@ -42,14 +42,14 @@
   background-color: var(--color-primary);
   background-image: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(0,0,0,0.25) 100%);
   border-radius: 36px;
-  padding: 32px;
+  padding: 24px;
   color: #ffffff;
   position: relative;
   overflow: hidden;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
   display: flex;
   flex-direction: column;
-  gap: 28px;
+  gap: 24px;
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
@@ -84,7 +84,7 @@
 .balance-card__row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  gap: 12px;
 }
 
 .balance-card__stat {
@@ -93,10 +93,10 @@
   -webkit-backdrop-filter: blur(8px);
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 24px;
-  padding: 16px;
+  padding: 12px;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   transition: transform var(--transition-fast);
 }
 
@@ -106,9 +106,9 @@
 }
 
 .balance-card__stat-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 14px;
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -124,9 +124,12 @@
 }
 
 .balance-card__stat-value {
-  font-size: calc(16px + var(--font-size-offset, 0px));
+  font-size: calc(14px + var(--font-size-offset, 0px));
   font-weight: 700;
   color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* ── Integrated Budget Widget ── */
