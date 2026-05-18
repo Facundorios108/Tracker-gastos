@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { getFirestore, enableMultiTabIndexedDbPersistence } from 'firebase/firestore';
 
 const firebaseConfig = {
   apiKey: "AIzaSyB19q_p1iOfzkOjDxb7jOI0mEgbzvo6tGw",
@@ -15,4 +15,10 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
+
+// Enable Firestore multi-tab offline persistence
+enableMultiTabIndexedDbPersistence(db).catch((err) => {
+  console.error("Firestore persistence could not be enabled:", err.code, err.message);
+});
+
 export default app;

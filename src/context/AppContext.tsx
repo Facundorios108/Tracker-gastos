@@ -130,6 +130,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       dispatch({ type: 'SET_USER', payload: user });
       dispatch({ type: 'SET_LOADING', payload: false });
+      if (!user) {
+        localStorage.setItem('app_user_uid', 'guest');
+      }
     });
     return () => unsubscribe();
   }, []);
@@ -137,53 +140,119 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!state.user) return;
 
-    // Listen to Settings
-    const settingsRef = doc(db, 'users', state.user.uid);
-    const unsubSettings = onSnapshot(settingsRef, (docSnap) => {
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        const merged = { ...defaultSettings, ...data.settings };
-        localStorage.setItem('app_settings', JSON.stringify(merged));
-        dispatch({ type: 'SET_SETTINGS', payload: merged });
-      } else {
-        // Init default settings in Firestore if new user
-        setDoc(settingsRef, { settings: defaultSettings }, { merge: true });
+    let active = true;
+    let unsubs: (() => void)[] = [];
+
+    const initUserAndListeners = async () => {
+      const currentUid = state.user.uid;
+      const storedUid = localStorage.getItem('app_user_uid');
+
+      if (storedUid !== currentUid) {
+        // If storedUid is guest or empty, migrate the guest data
+        if (!storedUid || storedUid === 'guest') {
+          const guestTransactions = getLocalData<Transaction[]>('app_transactions', []);
+          const guestGoals = getLocalData<SavingsGoal[]>('app_goals', []);
+          const guestFunds = getLocalData<FundAllocation[]>('app_funds', []);
+          const guestSettings = getInitialSettings();
+
+          if (guestTransactions.length > 0 || guestGoals.length > 0 || guestFunds.length > 0) {
+            console.log("Migrating guest data to user:", currentUid);
+            
+            const promises: Promise<void>[] = [];
+            for (const t of guestTransactions) {
+              promises.push(setDoc(doc(db, 'users', currentUid, 'transactions', t.id), t, { merge: true }));
+            }
+            for (const g of guestGoals) {
+              promises.push(setDoc(doc(db, 'users', currentUid, 'goals', g.id), g, { merge: true }));
+            }
+            for (const f of guestFunds) {
+              promises.push(setDoc(doc(db, 'users', currentUid, 'funds', f.id), f, { merge: true }));
+            }
+            promises.push(setDoc(doc(db, 'users', currentUid), { settings: guestSettings }, { merge: true }));
+
+            try {
+              await Promise.all(promises);
+              console.log("Guest data migration complete.");
+            } catch (err) {
+              console.error("Migration error:", err);
+            }
+          }
+        } else {
+          // Different user logged in. Clean up other user's caches.
+          console.log("Different user logged in. Clearing local storage caches.");
+          localStorage.removeItem('app_transactions');
+          localStorage.removeItem('app_goals');
+          localStorage.removeItem('app_funds');
+          localStorage.setItem('app_settings', JSON.stringify(defaultSettings));
+
+          dispatch({ type: 'SET_TRANSACTIONS', payload: [] });
+          dispatch({ type: 'SET_GOALS', payload: [] });
+          dispatch({ type: 'SET_FUNDS', payload: [] });
+          dispatch({ type: 'SET_SETTINGS', payload: defaultSettings });
+        }
+
+        localStorage.setItem('app_user_uid', currentUid);
       }
-    }, (error) => {
-      console.error("Settings listener error:", error);
-    });
 
-    // Listen to Transactions
-    const transactionsQuery = query(
-      collection(db, 'users', state.user.uid, 'transactions'),
-      orderBy('date', 'desc')
-    );
-    const unsubTransactions = onSnapshot(transactionsQuery, (querySnap) => {
-      const transactions = querySnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
-      dispatch({ type: 'SET_TRANSACTIONS', payload: transactions });
-    }, (error) => {
-      console.error("Transactions listener error:", error);
-    });
+      if (!active) return;
 
-    const unsubGoals = onSnapshot(query(collection(db, 'users', state.user.uid, 'goals')), (querySnap) => {
-      const goals = querySnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as SavingsGoal));
-      dispatch({ type: 'SET_GOALS', payload: goals });
-    }, (error) => {
-      console.error("Goals listener error:", error);
-    });
+      // Listen to Settings
+      const settingsRef = doc(db, 'users', currentUid);
+      const unsubSettings = onSnapshot(settingsRef, (docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          const merged = { ...defaultSettings, ...data.settings };
+          localStorage.setItem('app_settings', JSON.stringify(merged));
+          dispatch({ type: 'SET_SETTINGS', payload: merged });
+        } else {
+          // Init default settings in Firestore if new user
+          setDoc(settingsRef, { settings: defaultSettings }, { merge: true });
+        }
+      }, (error) => {
+        console.error("Settings listener error:", error);
+      });
+      unsubs.push(unsubSettings);
 
-    const unsubFunds = onSnapshot(query(collection(db, 'users', state.user.uid, 'funds')), (querySnap) => {
-      const funds = querySnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as FundAllocation));
-      dispatch({ type: 'SET_FUNDS', payload: funds });
-    }, (error) => {
-      console.error("Funds listener error:", error);
-    });
+      // Listen to Transactions
+      const transactionsQuery = query(
+        collection(db, 'users', currentUid, 'transactions'),
+        orderBy('date', 'desc')
+      );
+      const unsubTransactions = onSnapshot(transactionsQuery, (querySnap) => {
+        const transactions = querySnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
+        localStorage.setItem('app_transactions', JSON.stringify(transactions));
+        dispatch({ type: 'SET_TRANSACTIONS', payload: transactions });
+      }, (error) => {
+        console.error("Transactions listener error:", error);
+      });
+      unsubs.push(unsubTransactions);
+
+      // Listen to Goals
+      const unsubGoals = onSnapshot(query(collection(db, 'users', currentUid, 'goals')), (querySnap) => {
+        const goals = querySnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as SavingsGoal));
+        localStorage.setItem('app_goals', JSON.stringify(goals));
+        dispatch({ type: 'SET_GOALS', payload: goals });
+      }, (error) => {
+        console.error("Goals listener error:", error);
+      });
+      unsubs.push(unsubGoals);
+
+      // Listen to Funds
+      const unsubFunds = onSnapshot(query(collection(db, 'users', currentUid, 'funds')), (querySnap) => {
+        const funds = querySnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as FundAllocation));
+        localStorage.setItem('app_funds', JSON.stringify(funds));
+        dispatch({ type: 'SET_FUNDS', payload: funds });
+      }, (error) => {
+        console.error("Funds listener error:", error);
+      });
+      unsubs.push(unsubFunds);
+    };
+
+    initUserAndListeners();
 
     return () => {
-      unsubSettings();
-      unsubTransactions();
-      unsubGoals();
-      unsubFunds();
+      active = false;
+      unsubs.forEach(unsub => unsub());
     };
   }, [state.user?.uid]);
 
@@ -422,6 +491,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const handleSignOut = async () => {
     await firebaseSignOut(auth);
+    
+    // Clear user-specific local data to prevent leakage to guest interface
+    localStorage.removeItem('app_transactions');
+    localStorage.removeItem('app_goals');
+    localStorage.removeItem('app_funds');
+    localStorage.setItem('app_settings', JSON.stringify(defaultSettings));
+    localStorage.setItem('app_user_uid', 'guest');
+
     dispatch({ type: 'SET_USER', payload: null });
     dispatch({ type: 'SET_TRANSACTIONS', payload: [] });
     dispatch({ type: 'SET_GOALS', payload: [] });
