@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Plus, Minus, Trash2, PiggyBank, Target, X, Pencil, Wallet, TrendingUp } from 'lucide-react';
+import { Plus, Trash2, PiggyBank, Target, X, Pencil, Wallet, TrendingUp } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { generateId } from '../utils';
 import type { FundAllocation } from '../types';
@@ -15,7 +15,7 @@ const FUND_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4', '#f9
 type Tab = 'goals' | 'funds';
 
 export default function Goals() {
-  const { state, addGoal, updateGoal, deleteGoal, addToGoal, formatCurrency, addFund, updateFund, deleteFund, updateSettings } = useApp();
+  const { state, addGoal, updateGoal, deleteGoal, addToGoal, formatCurrency, addFund, updateFund, deleteFund } = useApp();
 
   const [activeTab, setActiveTab] = useState<Tab>('goals');
 
