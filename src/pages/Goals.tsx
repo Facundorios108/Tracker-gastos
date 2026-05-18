@@ -25,6 +25,7 @@ export default function Goals() {
   const [goalCurrency, setGoalCurrency] = useState<'ARS' | 'USD'>('ARS');
   const [goalEmoji, setGoalEmoji] = useState(0);
   const [goalColor, setGoalColor] = useState(0);
+  const [goalDeadline, setGoalDeadline] = useState('');
   const [addAmountGoalId, setAddAmountGoalId] = useState<string | null>(null);
   const [addAmount, setAddAmount] = useState('');
   const [editingGoalId, setEditingGoalId] = useState<string | null>(null);
@@ -41,7 +42,7 @@ export default function Goals() {
   // ── Goal handlers ──
   const resetGoalForm = () => {
     setGoalTitle(''); setGoalTarget(''); setGoalCurrency('ARS');
-    setGoalEmoji(0); setGoalColor(0); setEditingGoalId(null); setShowGoalForm(false);
+    setGoalEmoji(0); setGoalColor(0); setGoalDeadline(''); setEditingGoalId(null); setShowGoalForm(false);
   };
 
   const handleEditGoal = (goal: any) => {
@@ -51,6 +52,7 @@ export default function Goals() {
     setGoalCurrency(goal.currency || 'ARS');
     setGoalEmoji(Math.max(0, GOAL_EMOJIS.indexOf(goal.emoji)));
     setGoalColor(Math.max(0, GOAL_COLORS.indexOf(goal.color)));
+    setGoalDeadline(goal.deadline || '');
     setShowGoalForm(true);
   };
 
@@ -60,13 +62,30 @@ export default function Goals() {
       const goal = state.goals.find(g => g.id === editingGoalId);
       if (goal) {
         updateGoal({ ...goal, title: goalTitle, targetAmount: parseFloat(goalTarget),
-          emoji: GOAL_EMOJIS[goalEmoji], color: GOAL_COLORS[goalColor], currency: goalCurrency });
+          emoji: GOAL_EMOJIS[goalEmoji], color: GOAL_COLORS[goalColor], currency: goalCurrency,
+          deadline: goalDeadline || undefined });
       }
     } else {
       addGoal({ id: generateId(), title: goalTitle, targetAmount: parseFloat(goalTarget),
-        currentAmount: 0, emoji: GOAL_EMOJIS[goalEmoji], color: GOAL_COLORS[goalColor], currency: goalCurrency });
+        currentAmount: 0, emoji: GOAL_EMOJIS[goalEmoji], color: GOAL_COLORS[goalColor],
+        currency: goalCurrency, deadline: goalDeadline || undefined });
     }
     resetGoalForm();
+  };
+
+  const getDaysRemaining = (deadline: string): { days: number; label: string; urgent: boolean } => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const target = new Date(deadline + 'T00:00:00');
+    const diff = Math.ceil((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    if (diff < 0) return { days: Math.abs(diff), label: `Vencida hace ${Math.abs(diff)}d`, urgent: true };
+    if (diff === 0) return { days: 0, label: '¡Hoy!', urgent: true };
+    if (diff === 1) return { days: 1, label: 'Mañana', urgent: true };
+    if (diff <= 7) return { days: diff, label: `${diff} días`, urgent: true };
+    if (diff <= 30) return { days: diff, label: `${diff} días`, urgent: false };
+    const months = Math.floor(diff / 30);
+    const rem = diff % 30;
+    return { days: diff, label: rem > 0 ? `${months}m ${rem}d` : `${months} meses`, urgent: false };
   };
 
   const handleAddToGoal = (goalId: string) => {
@@ -220,6 +239,16 @@ export default function Goals() {
                   ))}
                 </div>
               </div>
+              <div className="goal-form__section">
+                <label className="goal-form__label">📅 Fecha límite (opcional)</label>
+                <input
+                  type="date"
+                  className="goal-form__input"
+                  value={goalDeadline}
+                  min={new Date().toISOString().split('T')[0]}
+                  onChange={e => setGoalDeadline(e.target.value)}
+                />
+              </div>
               <div className="goal-form__actions">
                 <button className="goal-form__cancel bounce-effect" onClick={resetGoalForm}>Cancelar</button>
                 <button className="goal-form__submit bounce-effect" onClick={handleSaveGoal}
@@ -258,6 +287,20 @@ export default function Goals() {
                     <div className="goal-card__progress-track">
                       <div className="goal-card__progress-fill" style={{ width: `${progress}%` }} />
                     </div>
+                    {goal.deadline && (() => {
+                      const dr = getDaysRemaining(goal.deadline);
+                      return (
+                        <div
+                          className="goal-deadline-badge"
+                          style={{
+                            color: dr.urgent ? '#ef4444' : 'var(--color-text-secondary)',
+                            background: dr.urgent ? 'rgba(239,68,68,0.1)' : 'var(--color-surface-container)',
+                          }}
+                        >
+                          ⏱ {dr.label}
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   <div className="goal-card__actions">

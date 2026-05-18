@@ -563,3 +563,16 @@
   display: flex;
   gap: 4px;
 }
+
+/* ── Goal Deadline Badge ── */
+.goal-deadline-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  font-size: calc(12px + var(--font-size-offset, 0px));
+  font-weight: 700;
+  width: fit-content;
+  transition: all var(--transition-base);
+}

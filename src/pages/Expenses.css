@@ -38,10 +38,12 @@
 .clear-filters-btn {
   font-size: calc(13px + var(--font-size-offset, 0px));
   font-weight: 600;
-  color: var(--color-primary);
-  background: var(--color-primary-soft);
-  padding: 6px 12px;
+  color: var(--color-on-surface);
+  background: var(--color-surface-container-high);
+  border: 1px solid var(--color-outline);
+  padding: 6px 14px;
   border-radius: var(--radius-full);
+  white-space: nowrap;
 }
 
 /* ── Range Filter ── */
@@ -107,12 +109,12 @@
 
 .custom-range-inputs {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: var(--space-sm);
 }
 
 .range-input-wrapper {
-  flex: 1;
+  width: 100%;
 }
 
 .range-input-wrapper label {
@@ -128,10 +130,11 @@
 
 .range-input {
   width: 100%;
+  box-sizing: border-box;
   background: var(--color-surface-container-lowest);
   border: 1px solid var(--color-outline);
   border-radius: var(--radius-lg);
-  padding: 12px;
+  padding: 12px 14px;
   font-size: calc(14px + var(--font-size-offset, 0px));
   font-weight: 600;
   color: var(--color-on-surface);
@@ -146,9 +149,7 @@
 }
 
 .range-separator {
-  color: var(--color-text-tertiary);
-  padding-top: 20px;
-  font-weight: 600;
+  display: none;
 }
 
 /* ── Search Bar ── */
@@ -261,10 +262,11 @@
 }
 
 .expense-item {
-  display: flex;
+  display: grid;
+  grid-template-columns: 44px 1fr auto auto;
   align-items: center;
-  gap: 14px;
-  padding: 16px;
+  gap: 12px;
+  padding: 14px 16px;
   transition: all var(--transition-base);
   position: relative;
 }
@@ -289,8 +291,8 @@
 }
 
 .transaction-item__info {
-  flex: 1;
   min-width: 0;
+  overflow: hidden;
 }
 
 .transaction-item__desc {
@@ -324,7 +326,8 @@
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 4px;
+  gap: 2px;
+  flex-shrink: 0;
 }
 
 .currency-badge-premium {
@@ -350,8 +353,8 @@
 /* Actions */
 .transaction-item__actions {
   display: flex;
-  gap: 8px;
-  margin-left: 8px;
+  gap: 6px;
+  flex-shrink: 0;
 }
 
 .transaction-item__action {

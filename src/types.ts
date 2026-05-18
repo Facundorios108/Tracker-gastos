@@ -17,6 +17,7 @@ export interface SavingsGoal {
   emoji: string;
   color: string;
   currency: 'ARS' | 'USD';
+  deadline?: string; // ISO date string "YYYY-MM-DD"
 }
 
 export interface FundAllocation {

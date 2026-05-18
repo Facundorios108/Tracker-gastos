@@ -187,18 +187,20 @@
 .category-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
+  gap: 10px;
 }
 
 .category-chip {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 16px;
+  gap: 10px;
+  padding: 13px 12px;
   border-radius: 18px;
   background: var(--color-surface-container-low);
   border: 2px solid transparent;
   transition: all var(--transition-base);
+  min-width: 0;
+  overflow: hidden;
 }
 
 .category-chip--active {
@@ -212,9 +214,13 @@
 }
 
 .category-chip__label {
-  font-size: calc(14px + var(--font-size-offset, 0px));
+  font-size: calc(13px + var(--font-size-offset, 0px));
   font-weight: 700;
   color: var(--color-on-surface);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 
 /* ── Inputs Premium ── */

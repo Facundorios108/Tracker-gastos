@@ -36,10 +36,18 @@ const getInitialSettings = (): UserSettings => {
   return defaultSettings;
 };
 
+const getLocalData = <T,>(key: string, fallback: T): T => {
+  try {
+    const local = localStorage.getItem(key);
+    if (local) return JSON.parse(local);
+  } catch (e) {}
+  return fallback;
+};
+
 const defaultState: AppState = {
-  transactions: [],
-  goals: [],
-  funds: [],
+  transactions: getLocalData<Transaction[]>('app_transactions', []),
+  goals: getLocalData<SavingsGoal[]>('app_goals', []),
+  funds: getLocalData<FundAllocation[]>('app_funds', []),
   settings: getInitialSettings(),
   user: null,
   isLoading: true,
@@ -180,29 +188,35 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [state.user?.uid]);
 
   useEffect(() => {
-    // Apply theme to document
+    const isDark = state.settings?.theme === 'dark';
+
+    // Apply theme attribute to html element
     if (state.settings?.theme) {
       document.documentElement.setAttribute('data-theme', state.settings.theme);
     }
-    
+
     // Apply customization CSS variables
     if (state.settings?.customization) {
       const { primaryColor, backgroundColor, fontSizeOffset } = state.settings.customization;
+
+      // Primary color - respected in both modes
       if (primaryColor) {
         document.documentElement.style.setProperty('--color-primary', primaryColor);
       } else {
         document.documentElement.style.removeProperty('--color-primary');
       }
-      
-      if (backgroundColor) {
+
+      // Background color - ONLY in light mode.
+      // In dark mode, always remove the inline override so [data-theme='dark'] tokens win.
+      if (backgroundColor && !isDark) {
         document.documentElement.style.setProperty('--color-background', backgroundColor);
+        document.documentElement.style.setProperty('--color-surface', backgroundColor);
       } else {
         document.documentElement.style.removeProperty('--color-background');
+        document.documentElement.style.removeProperty('--color-surface');
       }
-      
+
       if (fontSizeOffset !== undefined) {
-        // Assume default html font-size is 16px. We'll adjust the base font size for the root.
-        // If they chose to increase size, we add to base size.
         document.documentElement.style.setProperty('--font-size-offset', `${fontSizeOffset}px`);
       } else {
         document.documentElement.style.removeProperty('--font-size-offset');
@@ -211,75 +225,181 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [state.settings?.theme, state.settings?.customization]);
 
   const addTransaction = async (t: Omit<Transaction, 'id'>) => {
-    if (!state.user) return;
-    const docRef = doc(collection(db, 'users', state.user.uid, 'transactions'));
-    await setDoc(docRef, { ...t, id: docRef.id });
+    const id = state.user ? doc(collection(db, 'users', state.user.uid, 'transactions')).id : crypto.randomUUID();
+    const newTransaction = { ...t, id };
+    
+    const newTransactions = [newTransaction, ...state.transactions];
+    dispatch({ type: 'SET_TRANSACTIONS', payload: newTransactions });
+    localStorage.setItem('app_transactions', JSON.stringify(newTransactions));
+
+    if (state.user) {
+      try {
+        await setDoc(doc(db, 'users', state.user.uid, 'transactions', id), newTransaction);
+      } catch (err) {
+        console.error("Firebase sync error:", err);
+      }
+    }
   };
 
   const updateTransaction = async (t: Transaction) => {
-    if (!state.user) return;
-    await setDoc(doc(db, 'users', state.user.uid, 'transactions', t.id), t, { merge: true });
+    const newTransactions = state.transactions.map(tr => tr.id === t.id ? t : tr);
+    dispatch({ type: 'SET_TRANSACTIONS', payload: newTransactions });
+    localStorage.setItem('app_transactions', JSON.stringify(newTransactions));
+
+    if (state.user) {
+      try {
+        await setDoc(doc(db, 'users', state.user.uid, 'transactions', t.id), t, { merge: true });
+      } catch (err) {
+        console.error("Firebase sync error:", err);
+      }
+    }
   };
 
   const deleteTransaction = async (id: string) => {
-    if (!state.user) return;
-    await deleteDoc(doc(db, 'users', state.user.uid, 'transactions', id));
+    const newTransactions = state.transactions.filter(tr => tr.id !== id);
+    dispatch({ type: 'SET_TRANSACTIONS', payload: newTransactions });
+    localStorage.setItem('app_transactions', JSON.stringify(newTransactions));
+
+    if (state.user) {
+      try {
+        await deleteDoc(doc(db, 'users', state.user.uid, 'transactions', id));
+      } catch (err) {
+        console.error("Firebase sync error:", err);
+      }
+    }
   };
 
   const addGoal = async (g: SavingsGoal) => {
-    if (!state.user) return;
-    await setDoc(doc(db, 'users', state.user.uid, 'goals', g.id), g);
+    const newGoals = [...state.goals, g];
+    dispatch({ type: 'SET_GOALS', payload: newGoals });
+    localStorage.setItem('app_goals', JSON.stringify(newGoals));
+
+    if (state.user) {
+      try {
+        await setDoc(doc(db, 'users', state.user.uid, 'goals', g.id), g);
+      } catch (err) {
+        console.error("Firebase sync error:", err);
+      }
+    }
   };
 
   const updateGoal = async (g: SavingsGoal) => {
-    if (!state.user) return;
-    await setDoc(doc(db, 'users', state.user.uid, 'goals', g.id), g, { merge: true });
+    const newGoals = state.goals.map(goal => goal.id === g.id ? g : goal);
+    dispatch({ type: 'SET_GOALS', payload: newGoals });
+    localStorage.setItem('app_goals', JSON.stringify(newGoals));
+
+    if (state.user) {
+      try {
+        await setDoc(doc(db, 'users', state.user.uid, 'goals', g.id), g, { merge: true });
+      } catch (err) {
+        console.error("Firebase sync error:", err);
+      }
+    }
   };
 
   const deleteGoal = async (id: string) => {
-    if (!state.user) return;
-    await deleteDoc(doc(db, 'users', state.user.uid, 'goals', id));
+    const newGoals = state.goals.filter(goal => goal.id !== id);
+    dispatch({ type: 'SET_GOALS', payload: newGoals });
+    localStorage.setItem('app_goals', JSON.stringify(newGoals));
+
+    if (state.user) {
+      try {
+        await deleteDoc(doc(db, 'users', state.user.uid, 'goals', id));
+      } catch (err) {
+        console.error("Firebase sync error:", err);
+      }
+    }
   };
 
   const addToGoal = async (goalId: string, amount: number) => {
-    if (!state.user) return;
-    const goal = state.goals.find(g => g.id === goalId);
-    if (goal) {
-      const newAmount = Math.min(goal.currentAmount + amount, goal.targetAmount);
-      await setDoc(doc(db, 'users', state.user.uid, 'goals', goal.id), { currentAmount: newAmount }, { merge: true });
+    const newGoals = state.goals.map(g => {
+      if (g.id === goalId) {
+        return { ...g, currentAmount: Math.min(g.currentAmount + amount, g.targetAmount) };
+      }
+      return g;
+    });
+    dispatch({ type: 'SET_GOALS', payload: newGoals });
+    localStorage.setItem('app_goals', JSON.stringify(newGoals));
+
+    if (state.user) {
+      const goal = state.goals.find(g => g.id === goalId);
+      if (goal) {
+        const newAmount = Math.min(goal.currentAmount + amount, goal.targetAmount);
+        try {
+          await setDoc(doc(db, 'users', state.user.uid, 'goals', goal.id), { currentAmount: newAmount }, { merge: true });
+        } catch (err) {
+          console.error("Firebase sync error:", err);
+        }
+      }
     }
   };
 
   const addFund = async (f: FundAllocation) => {
-    if (!state.user) return;
-    await setDoc(doc(db, 'users', state.user.uid, 'funds', f.id), f);
+    const newFunds = [...state.funds, f];
+    dispatch({ type: 'SET_FUNDS', payload: newFunds });
+    localStorage.setItem('app_funds', JSON.stringify(newFunds));
+
+    if (state.user) {
+      try {
+        await setDoc(doc(db, 'users', state.user.uid, 'funds', f.id), f);
+      } catch (err) {
+        console.error("Firebase sync error:", err);
+      }
+    }
   };
 
   const updateFund = async (f: FundAllocation) => {
-    if (!state.user) return;
-    await setDoc(doc(db, 'users', state.user.uid, 'funds', f.id), f, { merge: true });
+    const newFunds = state.funds.map(fund => fund.id === f.id ? f : fund);
+    dispatch({ type: 'SET_FUNDS', payload: newFunds });
+    localStorage.setItem('app_funds', JSON.stringify(newFunds));
+
+    if (state.user) {
+      try {
+        await setDoc(doc(db, 'users', state.user.uid, 'funds', f.id), f, { merge: true });
+      } catch (err) {
+        console.error("Firebase sync error:", err);
+      }
+    }
   };
 
   const deleteFund = async (id: string) => {
-    if (!state.user) return;
-    await deleteDoc(doc(db, 'users', state.user.uid, 'funds', id));
+    const newFunds = state.funds.filter(fund => fund.id !== id);
+    dispatch({ type: 'SET_FUNDS', payload: newFunds });
+    localStorage.setItem('app_funds', JSON.stringify(newFunds));
+
+    if (state.user) {
+      try {
+        await deleteDoc(doc(db, 'users', state.user.uid, 'funds', id));
+      } catch (err) {
+        console.error("Firebase sync error:", err);
+      }
+    }
   };
 
   const updateSettings = async (nextSettings: Partial<UserSettings>) => {
-    if (!state.user) return;
     const mergedSettings = { ...state.settings, ...nextSettings };
     
     dispatch({ type: 'SET_SETTINGS', payload: nextSettings });
     localStorage.setItem('app_settings', JSON.stringify(mergedSettings));
 
-    if (settingsSaveTimeout) clearTimeout(settingsSaveTimeout);
-    settingsSaveTimeout = setTimeout(() => {
-      setDoc(doc(db, 'users', state.user.uid), { settings: mergedSettings }, { merge: true }).catch(console.error);
-    }, 1000);
+    if (state.user) {
+      if (settingsSaveTimeout) clearTimeout(settingsSaveTimeout);
+      settingsSaveTimeout = setTimeout(() => {
+        setDoc(doc(db, 'users', state.user.uid), { settings: mergedSettings }, { merge: true })
+          .catch(err => console.error("Firebase sync error:", err));
+      }, 1000);
+    }
   };
 
   const clearAllData = async () => {
-    if (!state.user) return;
+    if (!state.user) {
+      localStorage.removeItem('app_transactions');
+      localStorage.removeItem('app_goals');
+      localStorage.removeItem('app_funds');
+      localStorage.setItem('app_settings', JSON.stringify(defaultSettings));
+      dispatch({ type: 'RESET_DATA' });
+      return;
+    }
     
     try {
       // Use batches or sequential deletes for reliability in this environment
