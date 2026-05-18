@@ -1,7 +1,7 @@
 .income-page {
   padding: var(--container-padding);
   padding-top: calc(env(safe-area-inset-top, 20px) + 24px);
-  padding-bottom: calc(var(--nav-height) + 60px);
+  padding-bottom: calc(var(--nav-height) + 100px);
   max-width: var(--max-width);
   margin: 0 auto;
   display: flex;
@@ -104,13 +104,17 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-sm);
+  width: 100%;
+  overflow: hidden;
 }
 
 .range-input-wrapper {
   width: 100%;
+  max-width: 100%;
   display: flex;
   flex-direction: column;
   gap: 6px;
+  overflow: hidden;
 }
 
 .range-input-wrapper label {
@@ -131,6 +135,10 @@
   color: var(--color-on-surface);
   font-family: inherit;
   width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 .range-separator {
@@ -224,10 +232,10 @@
   -webkit-backdrop-filter: blur(8px);
   border: 1px solid var(--color-glass-border);
   border-radius: var(--radius-xl);
-  padding: 14px;
+  padding: 12px;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   transition: transform var(--transition-base), background var(--transition-base);
 }
 
@@ -237,13 +245,14 @@
 }
 
 .income-item__icon {
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   border-radius: var(--radius-lg);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: calc(20px + var(--font-size-offset, 0px));
+  font-size: calc(18px + var(--font-size-offset, 0px));
+  flex-shrink: 0;
 }
 
 .income-item__info {
@@ -253,7 +262,7 @@
 
 .income-item__desc {
   font-weight: 700;
-  font-size: calc(15px + var(--font-size-offset, 0px));
+  font-size: calc(14px + var(--font-size-offset, 0px));
   color: var(--color-on-surface);
   white-space: nowrap;
   overflow: hidden;
@@ -264,10 +273,24 @@
 .income-item__meta {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: calc(12px + var(--font-size-offset, 0px));
+  gap: 4px;
+  font-size: calc(11px + var(--font-size-offset, 0px));
   color: var(--color-text-tertiary);
   font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.income-item__category {
+  flex-shrink: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.income-item__method {
+  flex-shrink: 0;
+  color: var(--color-text-secondary);
 }
 
 .income-item__dot {
@@ -280,9 +303,10 @@
 
 .income-item__amount {
   font-weight: 700;
-  font-size: calc(16px + var(--font-size-offset, 0px));
+  font-size: calc(14px + var(--font-size-offset, 0px));
   color: var(--color-income);
   letter-spacing: -0.01em;
+  white-space: nowrap;
 }
 
 .currency-badge-glass {
@@ -299,13 +323,14 @@
 /* ── Actions ── */
 .income-item__actions {
   display: flex;
-  gap: 8px;
-  margin-left: 8px;
+  gap: 4px;
+  margin-left: 4px;
+  flex-shrink: 0;
 }
 
 .income-action-btn {
-  width: 32px;
-  height: 32px;
+  width: 30px;
+  height: 30px;
   border-radius: var(--radius-md);
   display: flex;
   align-items: center;
@@ -322,6 +347,25 @@
 
 .income-action-btn:active {
   background: var(--color-surface-container-high);
+}
+
+/* Notes */
+.transaction-item__notes {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: calc(11px + var(--font-size-offset, 0px));
+  color: var(--color-text-tertiary);
+  font-style: italic;
+  margin-top: 2px;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.transaction-item__notes span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* ── Empty State ── */

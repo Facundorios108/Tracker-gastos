@@ -1,8 +1,9 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Search, Trash2, Pencil, CreditCard, Banknote, Landmark, Smartphone } from 'lucide-react';
+import { Search, Trash2, Pencil, CreditCard, Banknote, Landmark, Smartphone, StickyNote } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { getCategoryConfig } from '../types';
 import { formatDateFull, getUniqueMonths, isDateInRange } from '../utils';
+import ConfirmModal from '../components/ConfirmModal';
 import './Expenses.css';
 
 interface ExpensesProps {
@@ -100,8 +101,17 @@ export default function Expenses({ onEdit, initialFilters }: ExpensesProps) {
     return Array.from(cats).map(getCategoryConfig);
   }, [state.transactions]);
 
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+
   const handleDelete = (id: string) => {
-    deleteTransaction(id);
+    setPendingDeleteId(id);
+  };
+
+  const confirmDelete = () => {
+    if (pendingDeleteId) {
+      deleteTransaction(pendingDeleteId);
+      setPendingDeleteId(null);
+    }
   };
 
   const resetFilters = () => {
@@ -280,12 +290,18 @@ export default function Expenses({ onEdit, initialFilters }: ExpensesProps) {
                         <span className="transaction-item__category">{cat.label}</span>
                         <span className="transaction-item__dot">·</span>
                         <span className="transaction-item__method">
-                          {t.paymentMethod === 'credit' ? 'Crédito' : 
-                           t.paymentMethod === 'debit' ? 'Débito' : 
-                           t.paymentMethod === 'cash' ? 'Efectivo' : 
-                           t.paymentMethod === 'transfer' ? 'Transferencia' : 'Efectivo'}
+                          {t.paymentMethod === 'credit' ? 'Créd.' : 
+                           t.paymentMethod === 'debit' ? 'Déb.' : 
+                           t.paymentMethod === 'cash' ? 'Efect.' : 
+                           t.paymentMethod === 'transfer' ? 'Transf.' : 'Efect.'}
                         </span>
                       </div>
+                      {t.notes && (
+                        <div className="transaction-item__notes">
+                          <StickyNote size={11} />
+                          <span>{t.notes}</span>
+                        </div>
+                      )}
                     </div>
                     <div className="transaction-amount-wrapper">
                       <div className="transaction-item__amount transaction-item__amount--expense">
@@ -325,7 +341,15 @@ export default function Expenses({ onEdit, initialFilters }: ExpensesProps) {
           </div>
         )}
       </div>
-    </div>
 
+      <ConfirmModal
+        isOpen={pendingDeleteId !== null}
+        title="Eliminar gasto"
+        message="¿Estás seguro de que querés eliminar este movimiento? Esta acción no se puede deshacer."
+        confirmLabel="Sí, eliminar"
+        onConfirm={confirmDelete}
+        onCancel={() => setPendingDeleteId(null)}
+      />
+    </div>
   );
 }

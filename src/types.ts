@@ -7,6 +7,7 @@ export interface Transaction {
   type: 'income' | 'expense';
   currency: 'ARS' | 'USD';
   paymentMethod?: 'credit' | 'debit' | 'cash' | 'transfer';
+  notes?: string;
 }
 
 export interface SavingsGoal {

@@ -96,10 +96,10 @@
 
 /* ── Content ── */
 .modal-content {
-  padding: 24px 24px 16px;
+  padding: 20px 20px 16px;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 20px;
 }
 
 .step-header {
@@ -227,7 +227,7 @@
 .input-group-premium {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .input-label-premium {
@@ -241,11 +241,13 @@
 
 .description-input-premium {
   width: 100%;
-  padding: 18px;
+  box-sizing: border-box;
+  padding: 14px 16px;
   border-radius: 16px;
   background: var(--color-surface-container-low);
   border: 1.5px solid var(--color-outline-variant);
-  font-size: calc(16px + var(--font-size-offset, 0px));
+  font-size: calc(15px + var(--font-size-offset, 0px));
+  font-weight: 500;
   color: var(--color-on-surface);
   transition: all 0.3s ease;
 }
@@ -256,15 +258,49 @@
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-primary) 15%, transparent);
 }
 
+.notes-textarea-premium {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: var(--color-surface-container-low);
+  border: 1.5px solid var(--color-outline-variant);
+  font-size: calc(14px + var(--font-size-offset, 0px));
+  font-weight: 500;
+  color: var(--color-on-surface);
+  transition: all 0.3s ease;
+  resize: vertical;
+  min-height: 60px;
+  max-height: 120px;
+  font-family: inherit;
+  line-height: 1.5;
+}
+
+.notes-textarea-premium::placeholder {
+  color: var(--color-text-tertiary);
+  font-weight: 400;
+}
+
+.notes-textarea-premium:focus {
+  border-color: var(--color-primary);
+  background: var(--color-surface-container-lowest);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-primary) 15%, transparent);
+  outline: none;
+}
+
 .date-input-premium {
   width: 100%;
-  padding: 16px;
+  box-sizing: border-box;
+  padding: 14px 16px;
   border-radius: 16px;
   background: var(--color-surface-container-low);
   border: 1.5px solid var(--color-outline-variant);
   color: var(--color-on-surface);
   font-size: calc(15px + var(--font-size-offset, 0px));
   font-weight: 500;
+  font-family: inherit;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 /* ── Payment Methods Premium ── */
@@ -424,3 +460,15 @@
   letter-spacing: 0.05em;
 }
 
+/* ── Modal Options Container ── */
+.modal-content__options {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.option-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}

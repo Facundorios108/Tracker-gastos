@@ -2,11 +2,12 @@ import { useState, useEffect, useMemo } from 'react';
 import { 
   User, Moon, Sun, DollarSign, LogOut, ChevronRight, 
   Calculator, Trash2, Shield, HelpCircle,
-  Wallet, Edit2, Check, Palette, Type
+  Wallet, Edit2, Check, Palette, Type, Download
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { getCategoryConfig } from '../types';
 import { formatDate } from '../utils';
+import { exportTransactionsToCSV } from '../utils/exportUtils';
 import './Profile.css';
 
 export default function Profile() {
@@ -437,6 +438,26 @@ export default function Profile() {
               </div>
               <ChevronRight size={18} style={{ opacity: 0.5 }} />
             </a>
+
+            <button 
+              className="premium-settings-item bounce-effect"
+              onClick={() => {
+                const now = new Date();
+                exportTransactionsToCSV(
+                  state.transactions,
+                  `my-wallet-${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+                );
+              }}
+            >
+              <div className="premium-settings-item__icon" style={{ color: 'var(--color-primary)' }}>
+                <Download size={20} />
+              </div>
+              <div className="premium-settings-item__content">
+                <span className="premium-settings-item__label">Exportar Datos</span>
+                <span className="premium-settings-item__value">Descargar movimientos en CSV</span>
+              </div>
+              <ChevronRight size={18} style={{ opacity: 0.5 }} />
+            </button>
           </div>
         </section>
 

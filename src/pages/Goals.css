@@ -369,11 +369,16 @@
 .goal-add-confirm {
   padding: 0 16px;
   border-radius: var(--radius-md);
-  background: var(--goal-color);
+  background: var(--goal-color, var(--color-primary));
   color: white;
   font-weight: 700;
   font-size: calc(13px + var(--font-size-offset, 0px));
   border: none;
+  transition: background 0.2s ease;
+}
+
+.goal-add-confirm--withdraw {
+  background: var(--color-error, #ef4444) !important;
 }
 
 .goal-add-cancel {
@@ -483,6 +488,7 @@
 /* ── Fund Card ── */
 .fund-card {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
@@ -495,6 +501,11 @@
   padding: 18px 16px 18px 18px;
   box-shadow: var(--shadow-glass);
   transition: all var(--transition-base);
+}
+
+.fund-card .goal-add-inline {
+  width: 100%;
+  flex-basis: 100%;
 }
 
 .fund-card:active {

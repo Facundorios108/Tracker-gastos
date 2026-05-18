@@ -314,7 +314,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const addToGoal = async (goalId: string, amount: number) => {
     const newGoals = state.goals.map(g => {
       if (g.id === goalId) {
-        return { ...g, currentAmount: Math.min(g.currentAmount + amount, g.targetAmount) };
+        const newAmount = Math.max(0, g.currentAmount + amount);
+        return { ...g, currentAmount: newAmount };
       }
       return g;
     });
@@ -324,7 +325,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (state.user) {
       const goal = state.goals.find(g => g.id === goalId);
       if (goal) {
-        const newAmount = Math.min(goal.currentAmount + amount, goal.targetAmount);
+        const newAmount = Math.max(0, goal.currentAmount + amount);
         try {
           await setDoc(doc(db, 'users', state.user.uid, 'goals', goal.id), { currentAmount: newAmount }, { merge: true });
         } catch (err) {

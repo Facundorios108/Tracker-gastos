@@ -1,8 +1,9 @@
 import { useState, useMemo } from 'react';
-import { Plus, Trash2, PiggyBank, Target, X, Pencil, Wallet, TrendingUp } from 'lucide-react';
+import { Plus, Minus, Trash2, PiggyBank, Target, X, Pencil, Wallet, TrendingUp } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { generateId } from '../utils';
 import type { FundAllocation } from '../types';
+import ConfirmModal from '../components/ConfirmModal';
 import './Goals.css';
 
 const GOAL_EMOJIS = ['✈️', '🏠', '💻', '🚗', '🎓', '💍', '📱', '🎸', '🏖️', '🎮'];
@@ -14,7 +15,7 @@ const FUND_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4', '#f9
 type Tab = 'goals' | 'funds';
 
 export default function Goals() {
-  const { state, addGoal, updateGoal, deleteGoal, addToGoal, formatCurrency, addFund, updateFund, deleteFund } = useApp();
+  const { state, addGoal, updateGoal, deleteGoal, addToGoal, formatCurrency, addFund, updateFund, deleteFund, updateSettings } = useApp();
 
   const [activeTab, setActiveTab] = useState<Tab>('goals');
 
@@ -30,6 +31,10 @@ export default function Goals() {
   const [addAmount, setAddAmount] = useState('');
   const [editingGoalId, setEditingGoalId] = useState<string | null>(null);
 
+  // ── Fund inline add/subtract state ──
+  const [addAmountFundId, setAddAmountFundId] = useState<string | null>(null);
+  const [addFundAmount, setAddFundAmount] = useState('');
+
   // ── Funds state ──
   const [showFundForm, setShowFundForm] = useState(false);
   const [fundTitle, setFundTitle] = useState('');
@@ -38,6 +43,9 @@ export default function Goals() {
   const [fundEmoji, setFundEmoji] = useState(0);
   const [fundColor, setFundColor] = useState(0);
   const [editingFundId, setEditingFundId] = useState<string | null>(null);
+
+  // ── Delete confirmation state ──
+  const [pendingDelete, setPendingDelete] = useState<{ type: 'goal' | 'fund'; id: string } | null>(null);
 
   // ── Goal handlers ──
   const resetGoalForm = () => {
@@ -89,9 +97,20 @@ export default function Goals() {
   };
 
   const handleAddToGoal = (goalId: string) => {
-    if (!addAmount || parseFloat(addAmount) <= 0) return;
-    addToGoal(goalId, parseFloat(addAmount));
+    const val = parseFloat(addAmount);
+    if (!addAmount || isNaN(val) || val === 0) return;
+    addToGoal(goalId, val);
     setAddAmount(''); setAddAmountGoalId(null);
+  };
+
+  const handleAddToFund = (fundId: string) => {
+    const val = parseFloat(addFundAmount);
+    if (!addFundAmount || isNaN(val) || val === 0) return;
+    const fund = state.funds.find(f => f.id === fundId);
+    if (!fund) return;
+    const newAmount = Math.max(0, fund.amount + val);
+    updateFund({ ...fund, amount: newAmount });
+    setAddFundAmount(''); setAddAmountFundId(null);
   };
 
   // ── Fund handlers ──
@@ -111,7 +130,7 @@ export default function Goals() {
   };
 
   const handleSaveFund = () => {
-    if (!fundTitle || !fundAmount || parseFloat(fundAmount) < 0) return;
+    if (!fundTitle || !fundAmount || isNaN(parseFloat(fundAmount))) return;
     const fundData: FundAllocation = {
       id: editingFundId || generateId(),
       title: fundTitle,
@@ -306,10 +325,12 @@ export default function Goals() {
                   <div className="goal-card__actions">
                     {addAmountGoalId === goal.id ? (
                       <div className="goal-add-inline animate-scale-in">
-                        <input type="number" className="goal-add-input" placeholder="¿Cuánto ahorraste?"
+                        <input type="number" className="goal-add-input" placeholder="Monto (negativo = retirar)"
                           value={addAmount} onChange={e => setAddAmount(e.target.value)} autoFocus />
-                        <button className="goal-add-confirm bounce-effect"
-                          onClick={() => handleAddToGoal(goal.id)} disabled={!addAmount}>Sumar</button>
+                        <button className={`goal-add-confirm bounce-effect ${addAmount && parseFloat(addAmount) < 0 ? 'goal-add-confirm--withdraw' : ''}`}
+                          onClick={() => handleAddToGoal(goal.id)} disabled={!addAmount || parseFloat(addAmount) === 0}>
+                          {addAmount && parseFloat(addAmount) < 0 ? 'Retirar' : 'Sumar'}
+                        </button>
                         <button className="goal-add-cancel bounce-effect"
                           onClick={() => { setAddAmountGoalId(null); setAddAmount(''); }}>
                           <X size={18} />
@@ -317,13 +338,11 @@ export default function Goals() {
                       </div>
                     ) : (
                       <>
-                        {!isComplete && (
-                          <button className="goal-card__add-btn bounce-effect"
-                            onClick={() => setAddAmountGoalId(goal.id)}>
-                            <PiggyBank size={18} style={{ color: goal.color }} />
-                            Ahorrar ahora
-                          </button>
-                        )}
+                        <button className="goal-card__add-btn bounce-effect"
+                          onClick={() => setAddAmountGoalId(goal.id)}>
+                          <PiggyBank size={18} style={{ color: goal.color }} />
+                          {isComplete ? 'Ajustar saldo' : 'Ahorrar ahora'}
+                        </button>
                         {isComplete && (
                           <div className="goal-complete-badge"
                             style={{ color: 'var(--color-primary)', fontWeight: 700, fontSize: '13px', display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -336,7 +355,7 @@ export default function Goals() {
                           <Pencil size={18} />
                         </button>
                         <button className="goal-card__delete-btn bounce-effect"
-                          onClick={() => deleteGoal(goal.id)} aria-label="Eliminar">
+                          onClick={() => setPendingDelete({ type: 'goal', id: goal.id })} aria-label="Eliminar">
                           <Trash2 size={18} />
                         </button>
                       </>
@@ -465,16 +484,38 @@ export default function Goals() {
                   </span>
                   <div className="fund-card__actions">
                     <button className="goal-card__delete-btn bounce-effect"
+                      onClick={() => {
+                        setAddAmountFundId(addAmountFundId === fund.id ? null : fund.id);
+                        setAddFundAmount('');
+                      }} aria-label="Ajustar monto"
+                      style={{ color: 'var(--color-text-secondary)' }}>
+                      <PiggyBank size={16} />
+                    </button>
+                    <button className="goal-card__delete-btn bounce-effect"
                       onClick={() => handleEditFund(fund)} aria-label="Editar"
                       style={{ color: 'var(--color-text-secondary)' }}>
                       <Pencil size={16} />
                     </button>
                     <button className="goal-card__delete-btn bounce-effect"
-                      onClick={() => deleteFund(fund.id)} aria-label="Eliminar">
+                      onClick={() => setPendingDelete({ type: 'fund', id: fund.id })} aria-label="Eliminar">
                       <Trash2 size={16} />
                     </button>
                   </div>
                 </div>
+                {addAmountFundId === fund.id && (
+                  <div className="goal-add-inline animate-scale-in" style={{ marginTop: '12px' }}>
+                    <input type="number" className="goal-add-input" placeholder="Monto (negativo = retirar)"
+                      value={addFundAmount} onChange={e => setAddFundAmount(e.target.value)} autoFocus />
+                    <button className={`goal-add-confirm bounce-effect ${addFundAmount && parseFloat(addFundAmount) < 0 ? 'goal-add-confirm--withdraw' : ''}`}
+                      onClick={() => handleAddToFund(fund.id)} disabled={!addFundAmount || parseFloat(addFundAmount) === 0}>
+                      {addFundAmount && parseFloat(addFundAmount) < 0 ? 'Retirar' : 'Sumar'}
+                    </button>
+                    <button className="goal-add-cancel bounce-effect"
+                      onClick={() => { setAddAmountFundId(null); setAddFundAmount(''); }}>
+                      <X size={18} />
+                    </button>
+                  </div>
+                )}
               </div>
             ))}
 
@@ -495,6 +536,21 @@ export default function Goals() {
           </div>
         </>
       )}
+
+      <ConfirmModal
+        isOpen={pendingDelete !== null}
+        title={pendingDelete?.type === 'goal' ? 'Eliminar meta' : 'Eliminar fondo'}
+        message={pendingDelete?.type === 'goal'
+          ? '¿Estás seguro de que querés eliminar esta meta? Todo el progreso se perderá.'
+          : '¿Estás seguro de que querés eliminar este fondo?'}
+        confirmLabel="Sí, eliminar"
+        onConfirm={() => {
+          if (pendingDelete?.type === 'goal') deleteGoal(pendingDelete.id);
+          else if (pendingDelete?.type === 'fund') deleteFund(pendingDelete.id);
+          setPendingDelete(null);
+        }}
+        onCancel={() => setPendingDelete(null)}
+      />
     </div>
   );
 }

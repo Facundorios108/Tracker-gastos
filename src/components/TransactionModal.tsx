@@ -27,6 +27,7 @@ export default function TransactionModal({
   const [description, setDescription] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [paymentMethod, setPaymentMethod] = useState<'credit' | 'debit' | 'cash' | 'transfer'>('cash');
+  const [notes, setNotes] = useState('');
 
   useEffect(() => {
     if (isOpen) {
@@ -39,6 +40,7 @@ export default function TransactionModal({
         setDescription(editingTransaction.description);
         setDate(new Date(editingTransaction.date).toISOString().split('T')[0]);
         setPaymentMethod(editingTransaction.paymentMethod || 'cash');
+        setNotes(editingTransaction.notes || '');
       } else {
         setStep('amount');
         setType(initialType);
@@ -48,6 +50,7 @@ export default function TransactionModal({
         setDescription('');
         setDate(new Date().toISOString().split('T')[0]);
         setPaymentMethod('cash');
+        setNotes('');
       }
     }
   }, [isOpen, initialType, editingTransaction]);
@@ -82,6 +85,7 @@ export default function TransactionModal({
       date: new Date(date + 'T12:00:00').toISOString(),
       type,
       currency,
+      notes: notes.trim() || undefined,
     };
 
     if (type === 'expense') {
@@ -246,6 +250,18 @@ export default function TransactionModal({
                 onChange={e => setDescription(e.target.value)}
                 autoFocus
                 maxLength={60}
+              />
+            </div>
+
+            <div className="input-group-premium">
+              <label className="input-label-premium">Notas adicionales (opcional)</label>
+              <textarea
+                className="notes-textarea-premium"
+                placeholder="Ej: Compré ropa para las vacaciones, pagué en 3 cuotas..."
+                value={notes}
+                onChange={e => setNotes(e.target.value)}
+                maxLength={200}
+                rows={3}
               />
             </div>
 
