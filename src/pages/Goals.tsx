@@ -85,7 +85,7 @@ export default function Goals() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const target = new Date(deadline + 'T00:00:00');
-    const diff = Math.ceil((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    const diff = Math.round((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
     if (diff < 0) return { days: Math.abs(diff), label: `Vencida hace ${Math.abs(diff)}d`, urgent: true };
     if (diff === 0) return { days: 0, label: '¡Hoy!', urgent: true };
     if (diff === 1) return { days: 1, label: 'Mañana', urgent: true };
