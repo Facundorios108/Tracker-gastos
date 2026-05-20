@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Search, Trash2, Pencil, CreditCard, Banknote, Landmark, Smartphone, StickyNote } from 'lucide-react';
+import { Search, Trash2, Pencil, CreditCard, Banknote, Landmark, Smartphone, StickyNote, X } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { getCategoryConfig } from '../types';
 import { formatDateFull, getUniqueMonths, isDateInRange } from '../utils';
@@ -67,7 +67,13 @@ export default function Expenses({ onEdit, initialFilters }: ExpensesProps) {
     if (filterPaymentMethod) {
       filtered = filtered.filter(t => t.paymentMethod === filterPaymentMethod);
     }
-    return filtered.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    // Ordenar por fecha descendente, y por ID como criterio de desempate para mismo día
+    return filtered.sort((a, b) => {
+      const dateDiff = new Date(b.date).getTime() - new Date(a.date).getTime();
+      if (dateDiff !== 0) return dateDiff;
+      // Si tienen la misma fecha, ordenar por ID (más reciente primero)
+      return b.id.localeCompare(a.id);
+    });
   }, [state.transactions, search, filterCategory, filterPaymentMethod, filterMonth, isCustomRange, dateRange]);
 
   // Group by date
@@ -103,8 +109,8 @@ export default function Expenses({ onEdit, initialFilters }: ExpensesProps) {
 
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
-  const handleDelete = (id: string) => {
-    setPendingDeleteId(id);
+  const handleDelete = (transaction: any) => {
+    setPendingDeleteId(transaction.id);
   };
 
   const confirmDelete = () => {
@@ -295,6 +301,30 @@ export default function Expenses({ onEdit, initialFilters }: ExpensesProps) {
                            t.paymentMethod === 'cash' ? 'Efect.' : 
                            t.paymentMethod === 'transfer' ? 'Transf.' : 'Efect.'}
                         </span>
+                        {t.isInstallment && t.installmentNumber && t.totalInstallments && (
+                          <>
+                            <span className="transaction-item__dot">·</span>
+                            <span className="transaction-item__installment" style={{
+                              color: 'var(--color-primary)',
+                              fontWeight: 700,
+                              fontSize: 'calc(11px + var(--font-size-offset, 0px))'
+                            }}>
+                              💳 Cuota {t.installmentNumber}/{t.totalInstallments}
+                            </span>
+                          </>
+                        )}
+                        {t.isRecurring && (
+                          <>
+                            <span className="transaction-item__dot">·</span>
+                            <span className="transaction-item__recurring" style={{
+                              color: 'var(--color-primary)',
+                              fontWeight: 700,
+                              fontSize: 'calc(11px + var(--font-size-offset, 0px))'
+                            }}>
+                              🔄 Suscripción
+                            </span>
+                          </>
+                        )}
                       </div>
                       {t.notes && (
                         <div className="transaction-item__notes">
@@ -319,7 +349,7 @@ export default function Expenses({ onEdit, initialFilters }: ExpensesProps) {
                       </button>
                       <button
                         className="transaction-item__action transaction-item__action--delete bounce-effect"
-                        onClick={() => handleDelete(t.id)}
+                        onClick={() => handleDelete(t)}
                         aria-label="Eliminar"
                       >
                         <Trash2 size={14} />
@@ -342,8 +372,9 @@ export default function Expenses({ onEdit, initialFilters }: ExpensesProps) {
         )}
       </div>
 
+      {/* Modal para eliminación */}
       <ConfirmModal
-        isOpen={pendingDeleteId !== null}
+        isOpen={!!pendingDeleteId}
         title="Eliminar gasto"
         message="¿Estás seguro de que querés eliminar este movimiento? Esta acción no se puede deshacer."
         confirmLabel="Sí, eliminar"

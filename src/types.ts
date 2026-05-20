@@ -8,6 +8,17 @@ export interface Transaction {
   currency: 'ARS' | 'USD';
   paymentMethod?: 'credit' | 'debit' | 'cash' | 'transfer';
   notes?: string;
+  
+  // Para cuotas
+  isInstallment?: boolean;
+  installmentTotal?: number; // Monto total de todas las cuotas
+  installmentNumber?: number; // Cuota actual (ej: 1)
+  totalInstallments?: number; // Total de cuotas (ej: 12)
+  installmentDay?: number; // Día del mes para la cuota
+  
+  // Para suscripciones
+  isRecurring?: boolean;
+  recurringDay?: number; // Día del mes para la suscripción
 }
 
 export interface SavingsGoal {

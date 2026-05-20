@@ -2,6 +2,11 @@
    Transaction Modal - Premium Styles
    ═══════════════════════════════════════════════════════ */
 
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
 .modal-backdrop {
   position: fixed;
   inset: 0;
@@ -26,6 +31,14 @@
   padding-bottom: env(safe-area-inset-bottom, 24px);
   box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.2);
   position: relative;
+  
+  /* Ocultar scrollbar pero mantener funcionalidad */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+
+.modal-sheet::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
 }
 
 [data-theme='dark'] .modal-sheet {
@@ -317,7 +330,7 @@
   padding: 14px 16px;
   border-radius: 16px;
   background: var(--color-surface-container-low);
-  border: 1.5px solid transparent;
+  border: 1.5px solid var(--color-outline-variant);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -325,12 +338,13 @@
   background: var(--color-primary-container);
   border-color: var(--color-primary);
   color: var(--color-on-primary-container);
-  box-shadow: 0 4px 12px rgba(27, 107, 79, 0.1);
+  box-shadow: 0 4px 12px rgba(27, 107, 79, 0.15);
 }
 
 .pm-icon-premium {
-  color: var(--color-text-secondary);
+  color: var(--color-on-surface);
   transition: color 0.3s ease;
+  flex-shrink: 0;
 }
 
 .active .pm-icon-premium {
@@ -340,6 +354,11 @@
 .pm-label-premium {
   font-size: calc(14px + var(--font-size-offset, 0px));
   font-weight: 700;
+  color: var(--color-on-surface);
+}
+
+.active .pm-label-premium {
+  color: var(--color-primary);
 }
 
 /* ── Transaction Summary Card ── */

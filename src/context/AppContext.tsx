@@ -2,7 +2,7 @@ import { createContext, useContext, useReducer, useEffect, type ReactNode } from
 import type { Transaction, SavingsGoal, FundAllocation, UserSettings } from '../types';
 import { auth, db } from '../firebaseConfig';
 import { onAuthStateChanged, signOut as firebaseSignOut } from 'firebase/auth';
-import { doc, setDoc, onSnapshot, collection, query, orderBy, deleteDoc } from 'firebase/firestore';
+import { doc, setDoc, onSnapshot, collection, query, orderBy, deleteDoc, getDocs } from 'firebase/firestore';
 
 /* ── State Shape ── */
 interface AppState {
@@ -147,6 +147,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const currentUid = state.user.uid;
       const storedUid = localStorage.getItem('app_user_uid');
 
+      console.log('🚀 Inicializando listeners para usuario:', {
+        currentUid,
+        storedUid,
+        email: state.user.email
+      });
+
       if (storedUid !== currentUid) {
         // If storedUid is guest or empty, migrate the guest data
         if (!storedUid || storedUid === 'guest') {
@@ -220,10 +226,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
       );
       const unsubTransactions = onSnapshot(transactionsQuery, (querySnap) => {
         const transactions = querySnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
+        console.log('🔄 Listener de transacciones actualizado:', {
+          cantidad: transactions.length,
+          ids: transactions.map(t => t.id),
+          categorias: transactions.map(t => t.category)
+        });
         localStorage.setItem('app_transactions', JSON.stringify(transactions));
         dispatch({ type: 'SET_TRANSACTIONS', payload: transactions });
       }, (error) => {
-        console.error("Transactions listener error:", error);
+        console.error("❌ Error en listener de transacciones:", error);
+        console.error("Código de error:", error.code);
+        console.error("Mensaje:", error.message);
       });
       unsubs.push(unsubTransactions);
 
@@ -293,48 +306,237 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [state.settings?.theme, state.settings?.customization]);
 
+  // TODO: Sistema de auto-generación deshabilitado - las transacciones se crean manualmente
+  // Procesar suscripciones y cuotas pendientes automáticamente
+  useEffect(() => {
+    // DESHABILITADO: No crear transacciones automáticamente
+    return;
+    
+    if (!state.user || state.transactions.length === 0) return;
+    
+    const processRecurringTransactions = async () => {
+      const today = new Date();
+      const currentMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+      
+      console.log('🔍 Verificando transacciones recurrentes para el mes:', currentMonth);
+      
+      // Buscar suscripciones activas (las más recientes con isRecurring: true)
+      const subscriptions = state.transactions.filter(t => t.isRecurring && t.recurringDay);
+      const uniqueSubscriptions = new Map();
+      
+      // Agrupar por día para evitar duplicados
+      subscriptions.forEach(sub => {
+        const key = `${sub.recurringDay}-${sub.category}-${sub.description}`;
+        const existing = uniqueSubscriptions.get(key);
+        if (!existing || new Date(sub.date) > new Date(existing.date)) {
+          uniqueSubscriptions.set(key, sub);
+        }
+      });
+      
+      // Verificar si falta crear la del mes actual
+      for (const [, sub] of uniqueSubscriptions) {
+        const subDate = new Date(sub.date);
+        const subMonth = `${subDate.getFullYear()}-${String(subDate.getMonth() + 1).padStart(2, '0')}`;
+        
+        // Si la última suscripción es de un mes anterior al actual, crear la nueva
+        if (subMonth < currentMonth) {
+          const newDate = new Date(today.getFullYear(), today.getMonth(), sub.recurringDay!);
+          
+          // Solo crear si el día no ha pasado aún este mes, o si no existe ya
+          const existsThisMonth = state.transactions.some(t => 
+            t.recurringDay === sub.recurringDay &&
+            t.category === sub.category &&
+            new Date(t.date).getMonth() === today.getMonth() &&
+            new Date(t.date).getFullYear() === today.getFullYear()
+          );
+          
+          if (!existsThisMonth && newDate.getDate() === sub.recurringDay) {
+            console.log('📅 Creando suscripción automática:', sub.description);
+            
+            const newTransaction: any = {
+              amount: sub.amount,
+              category: sub.category,
+              description: sub.description,
+              date: newDate.toISOString(),
+              type: sub.type,
+              currency: sub.currency,
+              isRecurring: true,
+              recurringDay: sub.recurringDay,
+            };
+            
+            if (sub.paymentMethod) {
+              newTransaction.paymentMethod = sub.paymentMethod;
+            }
+            if (sub.notes) {
+              newTransaction.notes = sub.notes;
+            }
+            
+            await addTransaction(newTransaction);
+          }
+        }
+      }
+      
+      // Buscar cuotas activas que necesitan crear la siguiente
+      const installments = state.transactions.filter(t => t.isInstallment && t.installmentDay);
+      const activeInstallments = new Map();
+      
+      // Agrupar por installmentDay y descripción base
+      installments.forEach(inst => {
+        if (!inst.totalInstallments || !inst.installmentNumber) return;
+        
+        const baseDesc = inst.description.replace(/\(Cuota \d+\/\d+\)/, '').trim();
+        const key = `${inst.installmentDay}-${baseDesc}`;
+        const existing = activeInstallments.get(key);
+        
+        if (!existing || (inst.installmentNumber! > existing.installmentNumber!)) {
+          activeInstallments.set(key, inst);
+        }
+      });
+      
+      // Verificar si falta crear la siguiente cuota
+      for (const [, inst] of activeInstallments) {
+        const instDate = new Date(inst.date);
+        const instMonth = `${instDate.getFullYear()}-${String(instDate.getMonth() + 1).padStart(2, '0')}`;
+        
+        // Si la última cuota es de un mes anterior y aún quedan cuotas por pagar
+        if (instMonth < currentMonth && inst.installmentNumber! < inst.totalInstallments!) {
+          const newDate = new Date(today.getFullYear(), today.getMonth(), inst.installmentDay!);
+          
+          // Solo crear si no existe ya
+          const existsThisMonth = state.transactions.some(t => 
+            t.installmentDay === inst.installmentDay &&
+            t.isInstallment &&
+            new Date(t.date).getMonth() === today.getMonth() &&
+            new Date(t.date).getFullYear() === today.getFullYear() &&
+            t.description?.includes(inst.description.replace(/\(Cuota \d+\/\d+\)/, '').trim())
+          );
+          
+          if (!existsThisMonth && newDate.getDate() === inst.installmentDay) {
+            const nextInstallmentNumber = inst.installmentNumber! + 1;
+            const installmentAmount = inst.installmentTotal! / inst.totalInstallments!;
+            const baseDesc = inst.description.replace(/\(Cuota \d+\/\d+\)/, '').trim();
+            
+            console.log(`📅 Creando cuota automática ${nextInstallmentNumber}/${inst.totalInstallments}`);
+            
+            const newTransaction: any = {
+              amount: Math.round(installmentAmount * 100) / 100,
+              category: inst.category,
+              description: `${baseDesc} (Cuota ${nextInstallmentNumber}/${inst.totalInstallments})`,
+              date: newDate.toISOString(),
+              type: inst.type,
+              currency: inst.currency,
+              isInstallment: true,
+              installmentTotal: inst.installmentTotal,
+              installmentNumber: nextInstallmentNumber,
+              totalInstallments: inst.totalInstallments,
+              installmentDay: inst.installmentDay,
+            };
+            
+            if (inst.paymentMethod) {
+              newTransaction.paymentMethod = inst.paymentMethod;
+            }
+            if (inst.notes) {
+              newTransaction.notes = inst.notes;
+            }
+            
+            await addTransaction(newTransaction);
+          }
+        }
+      }
+    };
+    
+    // Ejecutar solo una vez cuando cambien las transacciones
+    const timeoutId = setTimeout(() => {
+      processRecurringTransactions().catch(err => {
+        console.error('Error procesando transacciones recurrentes:', err);
+      });
+    }, 2000); // Esperar 2 segundos después de que carguen las transacciones
+    
+    return () => clearTimeout(timeoutId);
+  }, [state.transactions.length, state.user?.uid]);
+
   const addTransaction = async (t: Omit<Transaction, 'id'>) => {
     const id = state.user ? doc(collection(db, 'users', state.user.uid, 'transactions')).id : crypto.randomUUID();
     const newTransaction = { ...t, id };
     
-    const newTransactions = [newTransaction, ...state.transactions];
-    dispatch({ type: 'SET_TRANSACTIONS', payload: newTransactions });
-    localStorage.setItem('app_transactions', JSON.stringify(newTransactions));
+    console.log('📝 Agregando nueva transacción:', {
+      id,
+      category: newTransaction.category,
+      amount: newTransaction.amount,
+      date: newTransaction.date,
+      type: newTransaction.type,
+      paymentMethod: newTransaction.paymentMethod,
+      notes: newTransaction.notes,
+      userId: state.user?.uid
+    });
 
+    // NO actualizamos el estado local antes de guardar en Firebase
+    // Dejamos que el listener de Firebase lo haga para evitar inconsistencias
+    
     if (state.user) {
       try {
+        console.log('💾 Guardando en Firebase...');
         await setDoc(doc(db, 'users', state.user.uid, 'transactions', id), newTransaction);
+        console.log('✅ Transacción guardada exitosamente en Firebase:', id);
       } catch (err) {
-        console.error("Firebase sync error:", err);
+        console.error("❌ Error guardando en Firebase:", err);
+        console.error("Detalles del error:", JSON.stringify(err, null, 2));
+        // Si falla, mostramos alerta al usuario
+        alert('Error al guardar la transacción. Por favor, verifica tu conexión e intenta nuevamente.');
+        throw err; // Re-lanzamos el error para que se maneje en el componente
       }
+    } else {
+      // Modo invitado: actualizamos localStorage
+      const newTransactions = [newTransaction, ...state.transactions];
+      dispatch({ type: 'SET_TRANSACTIONS', payload: newTransactions });
+      localStorage.setItem('app_transactions', JSON.stringify(newTransactions));
     }
   };
 
   const updateTransaction = async (t: Transaction) => {
-    const newTransactions = state.transactions.map(tr => tr.id === t.id ? t : tr);
-    dispatch({ type: 'SET_TRANSACTIONS', payload: newTransactions });
-    localStorage.setItem('app_transactions', JSON.stringify(newTransactions));
+    console.log('✏️ Actualizando transacción:', {
+      id: t.id,
+      category: t.category,
+      amount: t.amount,
+      userId: state.user?.uid
+    });
 
     if (state.user) {
       try {
+        console.log('💾 Guardando actualización en Firebase...');
         await setDoc(doc(db, 'users', state.user.uid, 'transactions', t.id), t, { merge: true });
+        console.log('✅ Transacción actualizada exitosamente en Firebase:', t.id);
       } catch (err) {
-        console.error("Firebase sync error:", err);
+        console.error("❌ Error actualizando en Firebase:", err);
+        alert('Error al actualizar la transacción. Por favor, verifica tu conexión e intenta nuevamente.');
+        throw err;
       }
+    } else {
+      // Modo invitado: actualizamos localStorage
+      const newTransactions = state.transactions.map(tr => tr.id === t.id ? t : tr);
+      dispatch({ type: 'SET_TRANSACTIONS', payload: newTransactions });
+      localStorage.setItem('app_transactions', JSON.stringify(newTransactions));
     }
   };
 
   const deleteTransaction = async (id: string) => {
-    const newTransactions = state.transactions.filter(tr => tr.id !== id);
-    dispatch({ type: 'SET_TRANSACTIONS', payload: newTransactions });
-    localStorage.setItem('app_transactions', JSON.stringify(newTransactions));
+    console.log('🗑️ Eliminando transacción:', id);
 
     if (state.user) {
       try {
+        console.log('💾 Eliminando de Firebase...');
         await deleteDoc(doc(db, 'users', state.user.uid, 'transactions', id));
+        console.log('✅ Transacción eliminada exitosamente de Firebase:', id);
       } catch (err) {
-        console.error("Firebase sync error:", err);
+        console.error("❌ Error eliminando de Firebase:", err);
+        alert('Error al eliminar la transacción. Por favor, verifica tu conexión e intenta nuevamente.');
+        throw err;
       }
+    } else {
+      // Modo invitado: actualizamos localStorage
+      const newTransactions = state.transactions.filter(tr => tr.id !== id);
+      dispatch({ type: 'SET_TRANSACTIONS', payload: newTransactions });
+      localStorage.setItem('app_transactions', JSON.stringify(newTransactions));
     }
   };
 
@@ -462,29 +664,68 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const clearAllData = async () => {
+    console.log('🗑️ Iniciando clearAllData...');
+    
     if (!state.user) {
       localStorage.removeItem('app_transactions');
       localStorage.removeItem('app_goals');
       localStorage.removeItem('app_funds');
       localStorage.setItem('app_settings', JSON.stringify(defaultSettings));
       dispatch({ type: 'RESET_DATA' });
+      console.log('✅ Datos locales borrados (modo invitado)');
       return;
     }
     
     try {
-      // Use batches or sequential deletes for reliability in this environment
-      const tPromises = state.transactions.map(t => deleteDoc(doc(db, 'users', state.user.uid, 'transactions', t.id)));
-      const gPromises = state.goals.map(g => deleteDoc(doc(db, 'users', state.user.uid, 'goals', g.id)));
-      const fPromises = state.funds.map(f => deleteDoc(doc(db, 'users', state.user.uid, 'funds', f.id)));
+      const userId = state.user.uid;
+      console.log('📡 Consultando todas las colecciones de Firebase para usuario:', userId);
       
-      await Promise.all([...tPromises, ...gPromises, ...fPromises]);
+      // Obtener TODAS las transacciones, metas y fondos directamente de Firebase
+      const [transactionsSnap, goalsSnap, fundsSnap] = await Promise.all([
+        getDocs(collection(db, 'users', userId, 'transactions')),
+        getDocs(collection(db, 'users', userId, 'goals')),
+        getDocs(collection(db, 'users', userId, 'funds'))
+      ]);
+      
+      console.log('📊 Documentos encontrados:', {
+        transacciones: transactionsSnap.size,
+        metas: goalsSnap.size,
+        fondos: fundsSnap.size
+      });
+      
+      // Eliminar todos los documentos
+      const deletePromises: Promise<void>[] = [];
+      
+      transactionsSnap.forEach(doc => {
+        deletePromises.push(deleteDoc(doc.ref));
+      });
+      
+      goalsSnap.forEach(doc => {
+        deletePromises.push(deleteDoc(doc.ref));
+      });
+      
+      fundsSnap.forEach(doc => {
+        deletePromises.push(deleteDoc(doc.ref));
+      });
+      
+      console.log('🔄 Eliminando', deletePromises.length, 'documentos...');
+      await Promise.all(deletePromises);
       
       // Reset settings to default
-      await setDoc(doc(db, 'users', state.user.uid), { settings: defaultSettings }, { merge: true });
+      console.log('⚙️ Reseteando configuración a valores predeterminados...');
+      await setDoc(doc(db, 'users', userId), { settings: defaultSettings }, { merge: true });
       
-      dispatch({ type: 'RESET_DATA' });
+      // Limpiar localStorage
+      localStorage.removeItem('app_transactions');
+      localStorage.removeItem('app_goals');
+      localStorage.removeItem('app_funds');
+      localStorage.setItem('app_settings', JSON.stringify(defaultSettings));
+      
+      console.log('✅ Todos los datos borrados exitosamente');
+      
+      // El listener actualizará automáticamente el estado
     } catch (err) {
-      console.error('Error clearing data:', err);
+      console.error('❌ Error al borrar datos:', err);
       throw err;
     }
   };

@@ -28,6 +28,8 @@ export default function TransactionModal({
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [paymentMethod, setPaymentMethod] = useState<'credit' | 'debit' | 'cash' | 'transfer'>('cash');
   const [notes, setNotes] = useState('');
+  const [installments, setInstallments] = useState<number | ''>(''); // Número de cuotas
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -51,6 +53,7 @@ export default function TransactionModal({
         setDate(new Date().toISOString().split('T')[0]);
         setPaymentMethod('cash');
         setNotes('');
+        setInstallments('');
       }
     }
   }, [isOpen, initialType, editingTransaction]);
@@ -75,9 +78,10 @@ export default function TransactionModal({
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!amount || !category) return;
     
+    // Construir objeto base sin campos undefined
     const transactionData: any = {
       amount: parseFloat(amount),
       category,
@@ -85,27 +89,93 @@ export default function TransactionModal({
       date: new Date(date + 'T12:00:00').toISOString(),
       type,
       currency,
-      notes: notes.trim() || undefined,
     };
+
+    // Solo agregar campos opcionales si tienen valor
+    if (notes.trim()) {
+      transactionData.notes = notes.trim();
+    }
 
     if (type === 'expense') {
       transactionData.paymentMethod = paymentMethod;
-    } else if (editingTransaction && 'paymentMethod' in editingTransaction) {
-      // In case we are changing an expense to income, we might want to drop it 
-      // but firestore updates might require deleting the field. 
-      // Actually we are sending the whole object to updateTransaction? 
-      // Yes, updateTransaction handles it.
     }
 
-    if (editingTransaction) {
-      updateTransaction({
-        ...editingTransaction,
-        ...transactionData,
-      });
-    } else {
-      addTransaction(transactionData);
+    console.log('📋 Modal - Enviando transacción:', {
+      isEditing: !!editingTransaction,
+      data: transactionData,
+      installments: installments,
+      category: category
+    });
+
+    try {
+      setIsLoading(true);
+      
+      if (editingTransaction) {
+        updateTransaction({
+          ...editingTransaction,
+          ...transactionData,
+        });
+        onClose();
+      } else {
+        // Verificar si es suscripción (categoría subscriptions)
+        const isSubscription = category === 'subscriptions';
+        
+        // Verificar si tiene cuotas
+        const hasInstallments = installments && installments > 1;
+
+        if (isSubscription) {
+          // Crear suscripción con la fecha seleccionada por el usuario
+          const selectedDate = new Date(date + 'T12:00:00');
+          const dayOfMonth = selectedDate.getDate();
+          
+          const subscriptionData = {
+            ...transactionData,
+            date: selectedDate.toISOString(),
+            isRecurring: true,
+            recurringDay: dayOfMonth,
+          };
+          
+          console.log('🔄 Creando suscripción:', selectedDate.toLocaleDateString(), 'Día:', dayOfMonth);
+          await addTransaction(subscriptionData);
+          
+        } else if (hasInstallments) {
+          // Crear primera cuota con la fecha seleccionada (monto dividido)
+          const selectedDate = new Date(date + 'T12:00:00');
+          const dayOfMonth = selectedDate.getDate();
+          const installmentAmount = parseFloat(amount) / (installments as number);
+          
+          const installmentData = {
+            ...transactionData,
+            amount: Math.round(installmentAmount * 100) / 100, // Redondear a 2 decimales
+            date: selectedDate.toISOString(),
+            isInstallment: true,
+            installmentTotal: parseFloat(amount),
+            installmentNumber: 1,
+            totalInstallments: installments as number,
+            installmentDay: dayOfMonth,
+            description: `${transactionData.description} (Cuota 1/${installments})`
+          };
+          
+          console.log(`💳 Creando primera cuota de ${installments}:`, {
+            montoTotal: amount,
+            montoPorCuota: installmentAmount,
+            fecha: selectedDate.toLocaleDateString(),
+            dia: dayOfMonth
+          });
+          await addTransaction(installmentData);
+          
+        } else {
+          // Transacción simple
+          await addTransaction(transactionData);
+        }
+        onClose();
+      }
+    } catch (err) {
+      console.error('Error en handleSubmit:', err);
+      // El error ya se muestra en el contexto con alert integrado
+    } finally {
+      setIsLoading(false);
     }
-    onClose();
   };
 
   const getCategoryLabel = (catId: string) => {
@@ -265,6 +335,70 @@ export default function TransactionModal({
               />
             </div>
 
+            {/* Campo de Cuotas - solo para gastos y no para suscripciones */}
+            {type === 'expense' && category !== 'subscriptions' && (
+              <div className="input-group-premium">
+                <label className="input-label-premium">¿Es una compra en cuotas?</label>
+                <input
+                  type="number"
+                  className="description-input-premium"
+                  placeholder="Número de cuotas (ej: 3, 6, 12...)"
+                  value={installments}
+                  onChange={e => {
+                    const value = e.target.value;
+                    if (value === '' || (parseInt(value) > 0 && parseInt(value) <= 60)) {
+                      setInstallments(value === '' ? '' : parseInt(value));
+                    }
+                  }}
+                  min="2"
+                  max="60"
+                />
+                {installments && installments > 1 && (
+                  <p className="helper-text" style={{ 
+                    fontSize: 'calc(12px + var(--font-size-offset, 0px))',
+                    color: 'var(--color-primary)',
+                    marginTop: '6px',
+                    fontWeight: 600
+                  }}>
+                    ✓ Se creará la primera cuota de ${Math.round((parseFloat(amount) / installments) * 100) / 100}. Las siguientes se generarán automáticamente cada mes.
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Mensaje informativo para suscripciones */}
+            {category === 'subscriptions' && (
+              <div className="info-card" style={{
+                background: 'var(--color-primary-container)',
+                border: '1.5px solid var(--color-primary)',
+                borderRadius: '16px',
+                padding: '14px 16px',
+                marginBottom: '12px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                  <span style={{ fontSize: '18px', flexShrink: 0 }}>🔄</span>
+                  <div>
+                    <p style={{ 
+                      fontSize: 'calc(13px + var(--font-size-offset, 0px))',
+                      fontWeight: 700,
+                      color: 'var(--color-primary)',
+                      marginBottom: '4px'
+                    }}>
+                      Suscripción Recurrente
+                    </p>
+                    <p style={{ 
+                      fontSize: 'calc(12px + var(--font-size-offset, 0px))',
+                      color: 'var(--color-on-surface)',
+                      opacity: 0.8,
+                      lineHeight: 1.4
+                    }}>
+                      Solo se creará la suscripción de este mes. Los meses siguientes se generarán automáticamente cuando llegue cada nuevo mes.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="modal-content__options">
               <div className="option-group">
                 <div className="option-label-with-icon">
@@ -326,8 +460,30 @@ export default function TransactionModal({
             <button
               className="modal-submit modal-submit--confirm bounce-effect"
               onClick={handleSubmit}
+              disabled={isLoading}
+              style={{
+                opacity: isLoading ? 0.7 : 1,
+                cursor: isLoading ? 'wait' : 'pointer'
+              }}
             >
-              Confirmar {type === 'income' ? 'Ingreso' : 'Gasto'}
+              {isLoading ? (
+                <>
+                  <span className="spinner" style={{
+                    display: 'inline-block',
+                    width: '16px',
+                    height: '16px',
+                    border: '2px solid rgba(255, 255, 255, 0.3)',
+                    borderTop: '2px solid white',
+                    borderRadius: '50%',
+                    animation: 'spin 0.8s linear infinite',
+                    marginRight: '8px',
+                    verticalAlign: 'middle'
+                  }}></span>
+                  Guardando...
+                </>
+              ) : (
+                `Confirmar ${type === 'income' ? 'Ingreso' : 'Gasto'}`
+              )}
             </button>
           </div>
         )}

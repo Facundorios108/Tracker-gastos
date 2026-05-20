@@ -231,6 +231,18 @@ export default function Income({ onEdit, initialFilters }: IncomeProps) {
                            t.paymentMethod === 'cash' ? 'Efect.' : 
                            t.paymentMethod === 'transfer' ? 'Transf.' : 'Efect.'}
                         </span>
+                        {t.isRecurring && (
+                          <>
+                            <span className="income-item__dot">·</span>
+                            <span className="income-item__recurring" style={{
+                              color: 'var(--color-primary)',
+                              fontWeight: 700,
+                              fontSize: 'calc(11px + var(--font-size-offset, 0px))'
+                            }}>
+                              🔄 Recurrente
+                            </span>
+                          </>
+                        )}
                       </div>
                       {t.notes && (
                         <div className="transaction-item__notes">

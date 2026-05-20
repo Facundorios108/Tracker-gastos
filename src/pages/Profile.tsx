@@ -27,6 +27,7 @@ export default function Profile() {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
   const [showPrivacyInfo, setShowPrivacyInfo] = useState(false);
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   
   // Group transactions by month for History
   const historyByMonth = useMemo(() => {
@@ -120,9 +121,11 @@ export default function Profile() {
     try {
       setShowResetModal(false);
       await clearAllData();
-      alert('Datos borrados exitosamente.');
+      setShowSuccessMessage(true);
+      setTimeout(() => setShowSuccessMessage(false), 3000);
     } catch (err) {
-      alert('Error al borrar los datos.');
+      console.error('Error al borrar datos:', err);
+      alert('Error al borrar los datos. Por favor, verifica tu conexión e intenta nuevamente.');
     }
   };
 
@@ -577,6 +580,28 @@ export default function Profile() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Success Message */}
+      {showSuccessMessage && (
+        <div className="success-toast animate-slide-up" style={{
+          position: 'fixed',
+          bottom: 'calc(80px + env(safe-area-inset-bottom, 0px))',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          background: 'var(--color-primary)',
+          color: 'white',
+          padding: '16px 24px',
+          borderRadius: '16px',
+          boxShadow: '0 8px 25px rgba(27, 107, 79, 0.3)',
+          fontWeight: 600,
+          fontSize: 'calc(14px + var(--font-size-offset, 0px))',
+          zIndex: 1000,
+          maxWidth: '90%',
+          textAlign: 'center'
+        }}>
+          ✅ Datos borrados exitosamente
         </div>
       )}
 
