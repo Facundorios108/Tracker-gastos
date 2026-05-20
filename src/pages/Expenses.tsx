@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Search, Trash2, Pencil, CreditCard, Banknote, Landmark, Smartphone, StickyNote, X } from 'lucide-react';
+import { Search, Trash2, Pencil, CreditCard, Banknote, Landmark, Smartphone, StickyNote } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { getCategoryConfig } from '../types';
 import { formatDateFull, getUniqueMonths, isDateInRange } from '../utils';
