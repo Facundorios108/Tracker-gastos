@@ -49,7 +49,7 @@ export default function Login() {
         <div className="login-glass-card">
           <div className="login-glass-card__header">
             <div className="brand-logo bounce-effect">
-              <Wallet size={32} strokeWidth={1.5} />
+              <img src="/logo.svg" alt="My Wallet Logo" style={{ width: '100%', height: '100%', borderRadius: '24px' }} />
             </div>
             <h1 className="brand-name">My wallet</h1>
             <p className="brand-tagline">Tu libertad financiera comienza aquí</p>

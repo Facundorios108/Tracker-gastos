@@ -790,7 +790,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const currentMonth = now.getMonth();
   const currentYear = now.getFullYear();
 
+  const currentMonthString = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
+
   const monthlyTransactions = state.transactions.filter(t => {
+    if (t.billingMonth) {
+      return t.billingMonth === currentMonthString;
+    }
     const d = new Date(t.date);
     return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
   });

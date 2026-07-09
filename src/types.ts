@@ -1,3 +1,23 @@
+export type CardBrand = 'visa' | 'mastercard' | 'amex' | 'naranja' | 'otro';
+
+export interface CreditCard {
+  id: string;
+  bank: string;
+  brand: CardBrand;
+  closingDate: number; // day of the month (1-31)
+  dueDate: number; // day of the month (1-31)
+  last4: string; // últimos 4 dígitos
+  color?: string; // color personalizado para distinguirlas
+}
+
+export const CARD_BRANDS: { id: CardBrand; label: string; color: string }[] = [
+  { id: 'visa', label: 'Visa', color: '#1A1F71' },
+  { id: 'mastercard', label: 'Mastercard', color: '#EB001B' },
+  { id: 'amex', label: 'American Express', color: '#006FCF' },
+  { id: 'naranja', label: 'Naranja', color: '#FF6600' },
+  { id: 'otro', label: 'Otra', color: '#64748b' },
+];
+
 export interface Transaction {
   id: string;
   amount: number;
@@ -6,7 +26,15 @@ export interface Transaction {
   date: string; // ISO string
   type: 'income' | 'expense';
   currency: 'ARS' | 'USD';
+  
+  // Novedades para Medio de Pago
   paymentMethod?: 'credit' | 'debit' | 'cash' | 'transfer';
+  creditCardId?: string;
+  billingMonth?: string; // Formato YYYY-MM
+  originalCurrency?: 'ARS' | 'USD';
+  originalAmount?: number;
+  exchangeRate?: number;
+  
   notes?: string;
   
   // Para cuotas
@@ -47,6 +75,7 @@ export interface UserSettings {
   theme: 'light' | 'dark';
   displayCurrency: 'ARS' | 'USD';
   exchangeRate: number; // ARS per USD
+  creditCards?: CreditCard[]; // Añadido para guardar tarjetas
   customization?: {
     primaryColor: string;
     backgroundColor: string;

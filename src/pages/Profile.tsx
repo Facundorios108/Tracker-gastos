@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { 
   User, Moon, Sun, DollarSign, LogOut, ChevronRight, 
   Calculator, Trash2, Shield, HelpCircle,
-  Wallet, Edit2, Check, Palette, Type, Download
+  Wallet, Edit2, Check, Palette, Type, Download, CreditCard as CreditCardIcon
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { getCategoryConfig } from '../types';
@@ -29,6 +29,19 @@ export default function Profile() {
   const [showPrivacyInfo, setShowPrivacyInfo] = useState(false);
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   
+  const [expandedMonth, setExpandedMonth] = useState<string | null>(null);
+  const [expandedYear, setExpandedYear] = useState<string | null>(new Date().getFullYear().toString());
+  
+  const [showCardsModal, setShowCardsModal] = useState(false);
+  const [showCardForm, setShowCardForm] = useState(false);
+  const [editingCard, setEditingCard] = useState<any | null>(null);
+  const [cardBank, setCardBank] = useState('');
+  const [cardBrand, setCardBrand] = useState('visa');
+  const [cardClosing, setCardClosing] = useState('');
+  const [cardDue, setCardDue] = useState('');
+  const [cardLast4, setCardLast4] = useState('');
+  const [cardColor, setCardColor] = useState('');
+
   // Group transactions by month for History
   const historyByMonth = useMemo(() => {
     if (!state?.transactions) return [];
@@ -37,7 +50,7 @@ export default function Profile() {
     
     state.transactions.forEach(t => {
       const d = new Date(t.date);
-      const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const monthKey = t.billingMonth || `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
       
       if (!groups[monthKey]) {
         groups[monthKey] = { income: 0, expenses: 0, balance: 0, transactions: [] };
@@ -62,6 +75,71 @@ export default function Profile() {
     
     return Object.entries(groups).sort((a, b) => b[0].localeCompare(a[0]));
   }, [state?.transactions, settings?.displayCurrency, settings?.exchangeRate]);
+
+  // Group by year for UI display
+  const historyByYear = useMemo(() => {
+    const years: { [year: string]: typeof historyByMonth } = {};
+    historyByMonth.forEach(item => {
+      const year = item[0].split('-')[0];
+      if (!years[year]) years[year] = [];
+      years[year].push(item);
+    });
+    return Object.entries(years).sort((a, b) => b[0].localeCompare(a[0]));
+  }, [historyByMonth]);
+
+  const resetCardForm = () => {
+    setEditingCard(null);
+    setCardBank('');
+    setCardBrand('visa');
+    setCardClosing('');
+    setCardDue('');
+    setCardLast4('');
+    setCardColor('');
+    setShowCardForm(false);
+  };
+
+  const openAddCard = () => {
+    resetCardForm();
+    setShowCardForm(true);
+  };
+
+  const openEditCard = (card: any) => {
+    setEditingCard(card);
+    setCardBank(card.bank);
+    setCardBrand(card.brand);
+    setCardClosing(card.closingDate);
+    setCardDue(card.dueDate);
+    setCardLast4(card.last4);
+    setCardColor(card.color || '');
+    setShowCardForm(true);
+  };
+
+  const handleSaveCard = () => {
+    if (!cardBank || !cardClosing || !cardDue || cardLast4.length !== 4) return;
+    
+    const newCard = {
+      id: editingCard ? editingCard.id : Date.now().toString(),
+      bank: cardBank,
+      brand: cardBrand as any,
+      last4: cardLast4,
+      closingDate: Number(cardClosing),
+      dueDate: Number(cardDue),
+      color: cardColor
+    };
+    
+    const updatedCards = editingCard
+      ? (settings?.creditCards || []).map(c => c.id === editingCard.id ? newCard : c)
+      : [...(settings?.creditCards || []), newCard];
+      
+    updateSettings({ creditCards: updatedCards });
+    resetCardForm();
+  };
+
+  const handleDeleteCard = (id: string) => {
+    if (window.confirm('¿Seguro que querés eliminar esta tarjeta?')) {
+      updateSettings({ creditCards: (settings?.creditCards || []).filter(c => c.id !== id) });
+    }
+  };
 
   // Keep inputs in sync with state updates
   useEffect(() => {
@@ -400,6 +478,20 @@ export default function Profile() {
                 </div>
               </div>
             </div>
+
+            {/* Mis Tarjetas Button */}
+            <div className="setup-card-glass bounce-effect" onClick={() => setShowCardsModal(true)} style={{ cursor: 'pointer', marginTop: '16px' }}>
+              <div className="setup-card__header">
+                <CreditCardIcon size={14} />
+                <span>Mis Tarjetas</span>
+              </div>
+              <div className="setup-card__body">
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                  <span style={{ fontSize: '16px', fontWeight: 600 }}>{(settings?.creditCards || []).length} Registradas</span>
+                  <ChevronRight size={18} style={{ opacity: 0.5 }} />
+                </div>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -465,45 +557,88 @@ export default function Profile() {
         </section>
 
         {/* History Section */}
-        {historyByMonth.length > 0 && (
+        {historyByYear.length > 0 && (
           <section className="profile-section animate-slide-up stagger-4">
-            <h3 className="section-label">Historial Mensual</h3>
-            <div className="history-list">
-              {historyByMonth.map(([monthKey, data]) => {
-                const [year, month] = monthKey.split('-');
-                const monthName = new Date(parseInt(year), parseInt(month) - 1, 1).toLocaleString('es-ES', { month: 'long', year: 'numeric' });
+            <h3 className="section-label">Historial por Año</h3>
+            <div className="history-list" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {historyByYear.map(([yearKey, monthsData]) => {
+                const isYearExpanded = expandedYear === yearKey;
+                let yearBalance = 0;
+                let yearIncome = 0;
+                let yearExpenses = 0;
+                monthsData.forEach(([_m, d]) => {
+                  yearBalance += d.balance;
+                  yearIncome += d.income;
+                  yearExpenses += d.expenses;
+                });
                 
                 return (
-                  <div key={monthKey} className="settings-list-glass" style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <h4 style={{ textTransform: 'capitalize', fontSize: '16px', margin: 0 }}>{monthName}</h4>
+                  <div key={yearKey} className="settings-list-glass" style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }} onClick={() => setExpandedYear(isYearExpanded ? null : yearKey)}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <ChevronRight size={20} style={{ transform: isYearExpanded ? 'rotate(90deg)' : 'none', transition: 'transform 0.3s' }} />
+                        <h4 style={{ fontSize: '18px', margin: 0, fontWeight: 'bold' }}>Año {yearKey}</h4>
+                      </div>
                       <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: '12px', opacity: 0.7 }}>Balance Final</div>
-                        <div style={{ fontSize: '18px', fontWeight: 'bold', color: data.balance >= 0 ? 'var(--color-primary)' : 'var(--color-expense)' }}>
-                          {data.balance >= 0 ? '+' : ''}{formatCurrency(data.balance)}
+                        <div style={{ fontSize: '12px', opacity: 0.7 }}>Balance Anual</div>
+                        <div style={{ fontSize: '16px', fontWeight: 'bold', color: yearBalance >= 0 ? 'var(--color-primary)' : 'var(--color-expense)' }}>
+                          {yearBalance >= 0 ? '+' : ''}{formatCurrency(yearBalance)}
                         </div>
                       </div>
                     </div>
                     
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '300px', overflowY: 'auto' }}>
-                      {data.transactions.map(t => {
-                        const cat = getCategoryConfig(t.category);
-                        return (
-                          <div key={t.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                              <span style={{ fontSize: '18px' }}>{cat.emoji}</span>
-                              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                <span style={{ fontSize: '14px', fontWeight: 600 }}>{t.description}</span>
-                                <span style={{ fontSize: '11px', opacity: 0.6 }}>{formatDate(t.date)}</span>
+                    {isYearExpanded && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '16px' }}>
+                        {monthsData.map(([monthKey, data]) => {
+                          
+                          let monthName = monthKey;
+                          if (monthKey.includes('-')) {
+                            const [y, m] = monthKey.split('-');
+                            monthName = new Date(parseInt(y), parseInt(m) - 1, 1).toLocaleString('es-ES', { month: 'long', year: 'numeric' });
+                          }
+                          const isExpanded = expandedMonth === monthKey;
+                          
+                          return (
+                            <div key={monthKey} style={{ padding: '12px', background: 'rgba(255,255,255,0.02)', borderRadius: '12px' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }} onClick={() => setExpandedMonth(isExpanded ? null : monthKey)}>
+                                <h5 style={{ textTransform: 'capitalize', fontSize: '15px', margin: 0 }}>{monthName}</h5>
+                                <div style={{ fontWeight: 'bold', color: data.balance >= 0 ? 'var(--color-primary)' : 'var(--color-expense)' }}>
+                                  {data.balance >= 0 ? '+' : ''}{formatCurrency(data.balance)}
+                                </div>
                               </div>
+                              
+                              {isExpanded && (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                                    <span style={{ fontSize: '13px', opacity: 0.7 }}>Ingresos: {formatCurrency(data.income)}</span>
+                                    <span style={{ fontSize: '13px', opacity: 0.7 }}>Egresos: {formatCurrency(data.expenses)}</span>
+                                  </div>
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '300px', overflowY: 'auto' }}>
+                                    {data.transactions.map(t => {
+                                      const cat = getCategoryConfig(t.category);
+                                      return (
+                                        <div key={t.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <span>{cat.emoji}</span>
+                                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                              <span style={{ fontSize: '14px' }}>{t.description}</span>
+                                              <span style={{ fontSize: '11px', opacity: 0.6 }}>{formatDate(t.date)} {t.paymentMethod === 'credit' && '💳'}</span>
+                                            </div>
+                                          </div>
+                                          <div style={{ fontSize: '14px', fontWeight: 'bold', color: t.type === 'income' ? 'var(--color-primary)' : 'var(--color-expense)' }}>
+                                            {t.type === 'income' ? '+' : '-'}{formatCurrency(t.amount)}
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              )}
                             </div>
-                            <div style={{ fontWeight: 'bold', color: t.type === 'income' ? 'var(--color-primary)' : 'var(--color-expense)' }}>
-                              {t.type === 'income' ? '+' : '-'}{formatCurrency(t.amount)}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -536,6 +671,117 @@ export default function Profile() {
       </div>
 
       {/* Logout Modal */}
+
+      {/* Tarjetas Modal */}
+      {showCardsModal && (
+        <div className="modal-overlay" onClick={() => setShowCardsModal(false)}>
+          <div className="modal-content profile-modal animate-slide-up" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Mis Tarjetas de Crédito</h2>
+              <button className="close-btn" onClick={() => setShowCardsModal(false)}>×</button>
+            </div>
+            
+            <div className="modal-body">
+              {!showCardForm ? (
+                <>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
+                    {(settings?.creditCards || []).length > 0 ? (
+                      settings.creditCards.map((c: any) => (
+                        <div key={c.id} style={{
+                          background: c.color ? `linear-gradient(135deg, ${c.color}dd, ${c.color}99)` : 'linear-gradient(135deg, #1e293b, #0f172a)',
+                          borderRadius: '16px',
+                          padding: '20px',
+                          color: 'white',
+                          position: 'relative',
+                          overflow: 'hidden'
+                        }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
+                            <div style={{ fontSize: '18px', fontWeight: 'bold' }}>{c.bank}</div>
+                            <div style={{ fontSize: '16px', textTransform: 'uppercase', opacity: 0.9 }}>{c.brand}</div>
+                          </div>
+                          
+                          <div style={{ fontSize: '20px', letterSpacing: '2px', marginBottom: '16px', fontFamily: 'monospace' }}>
+                            **** **** **** {c.last4}
+                          </div>
+                          
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', fontSize: '12px', opacity: 0.8 }}>
+                            <div>
+                              <div>Cierre: Día {c.closingDate}</div>
+                              <div>Vto: Día {c.dueDate}</div>
+                            </div>
+                            <div style={{ display: 'flex', gap: '12px' }}>
+                              <button onClick={() => openEditCard(c)} style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer', padding: '4px' }}><Edit2 size={16} /></button>
+                              <button onClick={() => handleDeleteCard(c.id)} style={{ background: 'transparent', border: 'none', color: '#ff4d4d', cursor: 'pointer', padding: '4px' }}><Trash2 size={16} /></button>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div style={{ textAlign: 'center', padding: '40px 0', opacity: 0.5 }}>
+                        No hay tarjetas registradas
+                      </div>
+                    )}
+                  </div>
+                  
+                  <button className="primary-btn" onClick={openAddCard} style={{ width: '100%' }}>
+                    Agregar Tarjeta
+                  </button>
+                </>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div className="form-group">
+                    <label>Banco</label>
+                    <input type="text" value={cardBank} onChange={e => setCardBank(e.target.value)} placeholder="Ej: Galicia, Santander..." className="form-input" />
+                  </div>
+                  
+                  <div className="form-group">
+                    <label>Marca (Bandera)</label>
+                    <select value={cardBrand} onChange={e => setCardBrand(e.target.value)} className="form-select">
+                      <option value="visa">Visa</option>
+                      <option value="mastercard">Mastercard</option>
+                      <option value="amex">American Express</option>
+                      <option value="naranja">Naranja</option>
+                      <option value="otra">Otra</option>
+                    </select>
+                  </div>
+                  
+                  <div className="form-row">
+                    <div className="form-group" style={{ flex: 1 }}>
+                      <label>Día de Cierre</label>
+                      <input type="number" min="1" max="31" value={cardClosing} onChange={e => setCardClosing(e.target.value)} placeholder="Ej: 21" className="form-input" />
+                    </div>
+                    <div className="form-group" style={{ flex: 1 }}>
+                      <label>Día de Vencimiento</label>
+                      <input type="number" min="1" max="31" value={cardDue} onChange={e => setCardDue(e.target.value)} placeholder="Ej: 5" className="form-input" />
+                    </div>
+                  </div>
+                  
+                  <div className="form-row">
+                    <div className="form-group" style={{ flex: 1 }}>
+                      <label>Últimos 4 números</label>
+                      <input type="text" maxLength={4} value={cardLast4} onChange={e => setCardLast4(e.target.value.replace(/\D/g, ''))} placeholder="Ej: 1234" className="form-input" />
+                    </div>
+                    <div className="form-group" style={{ flex: 1 }}>
+                      <label>Color</label>
+                      <input type="color" value={cardColor || '#1e293b'} onChange={e => setCardColor(e.target.value)} className="form-input" style={{ padding: '0 8px', height: '48px', width: '100%' }} />
+                    </div>
+                  </div>
+                  
+                  <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
+                    <button className="secondary-btn" onClick={() => setShowCardForm(false)} style={{ flex: 1 }}>
+                      Cancelar
+                    </button>
+                    <button className="primary-btn" onClick={handleSaveCard} style={{ flex: 1 }} disabled={!cardBank || !cardClosing || !cardDue || cardLast4.length !== 4}>
+                      {editingCard ? 'Guardar Cambios' : 'Agregar'}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {showLogoutModal && (
         <div className="modal-backdrop" onClick={() => setShowLogoutModal(false)}>
           <div className="modal-sheet animate-slide-up" onClick={e => e.stopPropagation()}>

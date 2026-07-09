@@ -7,11 +7,12 @@ import Expenses from './pages/Expenses';
 import Income from './pages/Income';
 import Goals from './pages/Goals';
 import Profile from './pages/Profile';
+import Cards from './pages/Cards';
 import Login from './pages/Login';
 import type { Transaction } from './types';
 import './styles/global.css';
 
-type Tab = 'dashboard' | 'expenses' | 'income' | 'goals' | 'profile';
+type Tab = 'dashboard' | 'expenses' | 'income' | 'goals' | 'cards' | 'profile';
 
 function AppContent() {
   const { state } = useApp();
@@ -21,10 +22,22 @@ function AppContent() {
   const [modalType, setModalType] = useState<'income' | 'expense'>('expense');
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [navFilters, setNavFilters] = useState<any>(null);
+  const [prefilledData, setPrefilledData] = useState<Partial<Transaction> | null>(null);
 
   const handleFabClick = () => {
     setModalType(activeTab === 'income' ? 'income' : 'expense');
     setEditingTransaction(null);
+    setPrefilledData(null);
+    setShowModal(true);
+  };
+
+  const handleAddExpenseForCard = (cardId: string) => {
+    setModalType('expense');
+    setEditingTransaction(null);
+    setPrefilledData({
+      paymentMethod: 'credit',
+      creditCardId: cardId
+    });
     setShowModal(true);
   };
 
@@ -49,6 +62,8 @@ function AppContent() {
         return <Income onEdit={handleEdit} initialFilters={navFilters} />;
       case 'goals':
         return <Goals />;
+      case 'cards':
+        return <Cards onEdit={handleEdit} onAddExpense={handleAddExpenseForCard} />;
       case 'profile':
         return <Profile />;
     }
@@ -82,9 +97,11 @@ function AppContent() {
         onClose={() => {
           setShowModal(false);
           setEditingTransaction(null);
+          setPrefilledData(null);
         }}
         initialType={modalType}
         editingTransaction={editingTransaction}
+        prefilledData={prefilledData}
       />
     </div>
   );

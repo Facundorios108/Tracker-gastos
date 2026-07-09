@@ -151,8 +151,8 @@ export default function Dashboard({ onNavigate, onEdit }: DashboardProps) {
       {/* ── Header ── */}
       <header className="dashboard__header animate-slide-up" style={{ justifyContent: 'center' }}>
         <div className="dashboard__logo-header" style={{ display: 'flex', alignItems: 'center' }}>
-          <div className="brand-logo bounce-effect" style={{ width: '48px', height: '48px', borderRadius: '14px', background: 'var(--color-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', overflow: 'hidden' }}>
-            <img src="/icon-192.png" alt="My Wallet" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          <div className="brand-logo bounce-effect" style={{ width: '48px', height: '48px', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', boxShadow: '0 8px 16px rgba(0,0,0,0.2)' }}>
+            <img src="/logo.svg" alt="My Wallet" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           </div>
         </div>
       </header>

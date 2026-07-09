@@ -1,0 +1,248 @@
+.cards-page {
+  padding: 24px 20px 100px;
+  min-height: 100vh;
+  box-sizing: border-box;
+}
+
+.cards-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.cards-header h2 {
+  font-size: calc(24px + var(--font-size-offset, 0px));
+  font-weight: 800;
+  margin: 0;
+  flex: 1;
+  text-align: center;
+}
+
+.cards-header .back-button {
+  background: var(--color-surface-container-low);
+  border: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-on-surface);
+  cursor: pointer;
+}
+
+/* ── Selected Card Detailed View ── */
+.selected-card-display {
+  border-radius: 20px;
+  padding: 24px;
+  color: white;
+  position: relative;
+  overflow: hidden;
+  min-height: 180px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2);
+}
+
+.selected-card-bg-circle-1 {
+  position: absolute;
+  top: -40px;
+  right: -40px;
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  z-index: 0;
+}
+
+.selected-card-bg-circle-2 {
+  position: absolute;
+  bottom: -60px;
+  right: 60px;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  z-index: 0;
+}
+
+.selected-card-top, .selected-card-middle, .selected-card-bottom {
+  position: relative;
+  z-index: 1;
+}
+
+.selected-card-top {
+  display: flex;
+  flex-direction: column;
+}
+
+.selected-card-brand {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  opacity: 0.9;
+  font-weight: 600;
+}
+
+.selected-card-bank {
+  font-size: 22px;
+  font-weight: 800;
+  margin-top: 4px;
+}
+
+.selected-card-middle {
+  margin: 24px 0;
+}
+
+.selected-card-number {
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: 4px;
+  font-family: monospace;
+}
+
+.selected-card-bottom {
+  display: flex;
+  gap: 24px;
+  font-size: 13px;
+  opacity: 0.9;
+}
+
+/* ── Totals Summary ── */
+.cards-totals-summary {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.cards-total-box {
+  flex: 1;
+  background: var(--color-surface-container-low);
+  padding: 20px;
+  border-radius: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border: 1px solid var(--color-outline-variant);
+}
+
+.cards-total-box.ars,
+.cards-total-box.usd {
+  border-bottom: 4px solid var(--color-primary);
+}
+
+.cards-total-label {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 700;
+  opacity: 0.7;
+}
+
+.cards-total-value {
+  font-size: 22px;
+  font-weight: 800;
+}
+
+/* ── Grid View ── */
+.cards-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+}
+
+.card-overview-item {
+  background: var(--color-surface-container-low);
+  border-radius: 20px;
+  border: 1px solid var(--color-outline-variant);
+  overflow: hidden;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.card-overview-visual {
+  padding: 16px 20px;
+  color: white;
+  position: relative;
+  overflow: hidden;
+  min-height: 100px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.card-overview-bg-1 {
+  position: absolute;
+  top: -20px;
+  right: -20px;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  z-index: 0;
+}
+
+.card-overview-top {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.card-overview-top span {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  opacity: 0.9;
+  font-weight: 600;
+}
+
+.card-overview-top strong {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.card-overview-number {
+  position: relative;
+  z-index: 1;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  margin-top: 16px;
+}
+
+.card-overview-data {
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.card-data-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.card-data-label {
+  font-size: 14px;
+  font-weight: 600;
+  opacity: 0.7;
+}
+
+.card-data-value {
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.card-data-value.ars {
+  color: var(--color-primary);
+}
+
+.card-data-value.usd {
+  color: var(--color-tertiary);
+}

@@ -10,15 +10,19 @@ interface TransactionModalProps {
   onClose: () => void;
   initialType?: 'income' | 'expense';
   editingTransaction?: Transaction | null;
+  prefilledData?: Partial<Transaction> | null;
 }
 
 export default function TransactionModal({ 
   isOpen, 
   onClose, 
   initialType = 'expense',
-  editingTransaction = null
+  editingTransaction = null,
+  prefilledData = null
 }: TransactionModalProps) {
-  const { addTransaction, updateTransaction } = useApp();
+  const { state, addTransaction, updateTransaction } = useApp();
+  const settings = state?.settings;
+
   const [step, setStep] = useState<'amount' | 'category' | 'description'>('amount');
   const [type, setType] = useState<'income' | 'expense'>(initialType);
   const [currency, setCurrency] = useState<'ARS' | 'USD'>('ARS');
@@ -27,6 +31,7 @@ export default function TransactionModal({
   const [description, setDescription] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [paymentMethod, setPaymentMethod] = useState<'credit' | 'debit' | 'cash' | 'transfer'>('cash');
+  const [creditCardId, setCreditCardId] = useState<string>('');
   const [notes, setNotes] = useState('');
   const [installments, setInstallments] = useState<number | ''>(''); // Número de cuotas
   const [isLoading, setIsLoading] = useState(false);
@@ -42,6 +47,7 @@ export default function TransactionModal({
         setDescription(editingTransaction.description);
         setDate(new Date(editingTransaction.date).toISOString().split('T')[0]);
         setPaymentMethod(editingTransaction.paymentMethod || 'cash');
+        setCreditCardId(editingTransaction.creditCardId || '');
         setNotes(editingTransaction.notes || '');
       } else {
         setStep('amount');
@@ -51,7 +57,8 @@ export default function TransactionModal({
         setCategory('');
         setDescription('');
         setDate(new Date().toISOString().split('T')[0]);
-        setPaymentMethod('cash');
+        setPaymentMethod(prefilledData?.paymentMethod || 'cash');
+        setCreditCardId(prefilledData?.creditCardId || '');
         setNotes('');
         setInstallments('');
       }
@@ -89,6 +96,7 @@ export default function TransactionModal({
       date: new Date(date + 'T12:00:00').toISOString(),
       type,
       currency,
+      exchangeRate: settings?.exchangeRate || 1000,
     };
 
     // Solo agregar campos opcionales si tienen valor
@@ -98,6 +106,24 @@ export default function TransactionModal({
 
     if (type === 'expense') {
       transactionData.paymentMethod = paymentMethod;
+      if (paymentMethod === 'credit' && creditCardId) {
+        transactionData.creditCardId = creditCardId;
+        const card = settings?.creditCards?.find(c => c.id === creditCardId);
+        if (card) {
+          const tDate = new Date(date + 'T12:00:00');
+          let bYear = tDate.getFullYear();
+          let bMonth = tDate.getMonth() + 1;
+          
+          if (tDate.getDate() > card.closingDate) {
+            bMonth += 1;
+            if (bMonth > 12) {
+              bMonth = 1;
+              bYear += 1;
+            }
+          }
+          transactionData.billingMonth = `${bYear}-${String(bMonth).padStart(2, '0')}`;
+        }
+      }
     }
 
     console.log('📋 Modal - Enviando transacción:', {
@@ -429,14 +455,43 @@ export default function TransactionModal({
                       <button
                         key={pm.id}
                         className={`pm-btn-premium bounce-effect ${paymentMethod === pm.id ? 'active' : ''}`}
-                        onClick={() => setPaymentMethod(pm.id as any)}
+                        onClick={() => { setPaymentMethod(pm.id as any); if(pm.id !== 'credit') setCreditCardId(''); }}
                         type="button"
+                        disabled={!!prefilledData?.creditCardId}
+                        style={{ opacity: !!prefilledData?.creditCardId && paymentMethod !== pm.id ? 0.3 : 1 }}
                       >
                         <span className="pm-icon-premium">{pm.icon}</span>
                         <span className="pm-label-premium">{pm.label}</span>
                       </button>
                     ))}
                   </div>
+                  
+                  {paymentMethod === 'credit' && settings?.creditCards && settings.creditCards.length > 0 && (
+                    <div style={{ marginTop: '12px' }}>
+                      <select 
+                        value={creditCardId} 
+                        onChange={e => setCreditCardId(e.target.value)}
+                        className="description-input-premium"
+                        style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'var(--color-surface)', color: 'var(--text-primary)', border: '1px solid rgba(255,255,255,0.1)' }}
+                        disabled={!!prefilledData?.creditCardId}
+                      >
+                        <option value="">Selecciona tu tarjeta...</option>
+                        {settings.creditCards.map(c => (
+                          <option key={c.id} value={c.id}>{c.bank} {c.brand.toUpperCase()} ····{c.last4}</option>
+                        ))}
+                      </select>
+                      {creditCardId && (
+                        <p style={{ fontSize: '11px', opacity: 0.6, marginTop: '8px' }}>
+                          Cierra el día {settings.creditCards.find(c => c.id === creditCardId)?.closingDate}. El gasto se asignará al mes correspondiente.
+                        </p>
+                      )}
+                    </div>
+                  )}
+                  {paymentMethod === 'credit' && (!settings?.creditCards || settings.creditCards.length === 0) && (
+                    <p style={{ fontSize: '12px', color: 'var(--color-error)', marginTop: '8px' }}>
+                      No tienes tarjetas configuradas. Agrégalas en Configuración.
+                    </p>
+                  )}
                 </div>
               )}
             </div>

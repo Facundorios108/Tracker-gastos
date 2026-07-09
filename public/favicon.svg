@@ -1,20 +1,32 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <defs>
     <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#10b981" />
-      <stop offset="100%" stop-color="#3b82f6" />
+      <stop offset="0%" stop-color="#1e293b"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <linearGradient id="card1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#10b981"/>
+    </linearGradient>
+    <linearGradient id="card2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#64748b"/>
+      <stop offset="100%" stop-color="#334155"/>
     </linearGradient>
   </defs>
-  <rect width="512" height="512" rx="112" fill="url(#bg)" />
-  <g transform="translate(128, 128) scale(10.666)" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none">
-    <path d="M12 10a2 2 0 0 0-2 2c0 1.02-.1 2.51-.26 4" />
-    <path d="M14 13.12c0 2.38 0 6.38-1 8.88" />
-    <path d="M17.29 21.02c.12-.6.43-2.3.5-3.02" />
-    <path d="M2 12a10 10 0 0 1 18-6" />
-    <path d="M2 16h.01" />
-    <path d="M21.8 16c.2-2 .131-5.354 0-6" />
-    <path d="M5 19.5C5.5 18 6 15 6 12a6 6 0 0 1 .34-2" />
-    <path d="M8.65 22c.21-.66.45-1.32.57-2" />
-    <path d="M9 6.8a6 6 0 0 1 9 5.2v2" />
-  </g>
+  
+  <rect width="512" height="512" rx="120" fill="url(#bg)"/>
+  
+  <!-- Back Card (Gray) -->
+  <rect x="120" y="140" width="272" height="176" rx="24" fill="url(#card2)" transform="rotate(8 256 228)"/>
+  
+  <!-- Front Card (Green/Blue) -->
+  <rect x="100" y="180" width="312" height="192" rx="28" fill="url(#card1)"/>
+  
+  <!-- Chip -->
+  <rect x="140" y="240" width="48" height="32" rx="8" fill="#facc15" opacity="0.9"/>
+  
+  <!-- Contactless waves -->
+  <path d="M 215 242 Q 225 256 215 270" stroke="white" stroke-width="6" stroke-linecap="round" fill="none" opacity="0.5"/>
+  <path d="M 230 238 Q 242 256 230 274" stroke="white" stroke-width="6" stroke-linecap="round" fill="none" opacity="0.75"/>
+  <path d="M 245 234 Q 260 256 245 278" stroke="white" stroke-width="6" stroke-linecap="round" fill="none"/>
 </svg>

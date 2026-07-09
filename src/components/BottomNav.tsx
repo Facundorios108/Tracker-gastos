@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { LayoutDashboard, ArrowDownCircle, ArrowUpCircle, Target, Plus, User } from 'lucide-react';
+import { LayoutDashboard, ArrowDownCircle, ArrowUpCircle, Target, Plus, User, CreditCard } from 'lucide-react';
 import './BottomNav.css';
 
-type Tab = 'dashboard' | 'expenses' | 'income' | 'goals' | 'profile';
+type Tab = 'dashboard' | 'expenses' | 'income' | 'goals' | 'cards' | 'profile';
 
 interface BottomNavProps {
   activeTab: Tab;
@@ -13,17 +13,18 @@ interface BottomNavProps {
 export default function BottomNav({ activeTab, onTabChange, onFabClick }: BottomNavProps) {
   const [fabPressed, setFabPressed] = useState(false);
 
-  const tabs: { id: Tab; label: string; icon: typeof LayoutDashboard }[] = [
+  const tabs: { id: Tab; label: string; icon: any }[] = [
     { id: 'dashboard', label: 'Resumen', icon: LayoutDashboard },
     { id: 'expenses', label: 'Gastos', icon: ArrowDownCircle },
     { id: 'income', label: 'Ingreso', icon: ArrowUpCircle },
     { id: 'goals', label: 'Metas', icon: Target },
+    { id: 'cards', label: 'Tarjetas', icon: CreditCard },
     { id: 'profile', label: 'Perfil', icon: User },
   ];
 
   return (
     <>
-      {activeTab !== 'profile' && (
+      {(activeTab === 'dashboard' || activeTab === 'expenses' || activeTab === 'income') && (
         <button
           className={`fab-fixed bounce-effect ${fabPressed ? 'fab-fixed--pressed' : ''}`}
           id="add-transaction-fab"

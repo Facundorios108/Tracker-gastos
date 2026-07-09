@@ -86,14 +86,12 @@
 .brand-logo {
   width: 72px;
   height: 72px;
-  background: linear-gradient(135deg, #10b981 0%, #3b82f6 100%);
-  border-radius: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
   margin: 0 auto 20px;
-  box-shadow: 0 15px 30px rgba(16, 185, 129, 0.3);
+  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
+  border-radius: 24px;
 }
 
 .brand-name {
