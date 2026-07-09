@@ -686,7 +686,7 @@ export default function Profile() {
                 <>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
                     {(settings?.creditCards || []).length > 0 ? (
-                      settings.creditCards.map((c: any) => (
+                      (settings?.creditCards || []).map((c: any) => (
                         <div key={c.id} style={{
                           background: c.color ? `linear-gradient(135deg, ${c.color}dd, ${c.color}99)` : 'linear-gradient(135deg, #1e293b, #0f172a)',
                           borderRadius: '16px',

@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { CreditCard as CreditCardIcon, ChevronLeft, Calendar } from 'lucide-react';
+import { CreditCard as CreditCardIcon, ChevronLeft } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { getCategoryConfig } from '../types';
 import { formatDate } from '../utils';

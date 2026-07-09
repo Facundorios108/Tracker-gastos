@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { auth } from '../firebaseConfig';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
-import { Mail, Lock, ChevronRight, Wallet } from 'lucide-react';
+import { Mail, Lock, ChevronRight } from 'lucide-react';
 import './Login.css';
 
 export default function Login() {
