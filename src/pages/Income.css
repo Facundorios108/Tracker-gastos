@@ -1,6 +1,6 @@
 .income-page {
   padding: var(--container-padding);
-  padding-top: calc(env(safe-area-inset-top, 20px) + 24px);
+  padding-top: 16px;
   padding-bottom: calc(var(--nav-height) + 100px);
   max-width: var(--max-width);
   margin: 0 auto;
