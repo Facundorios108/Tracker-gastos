@@ -99,7 +99,13 @@ export default function Profile() {
   };
 
   const openAddCard = () => {
-    resetCardForm();
+    setEditingCard(null);
+    setCardBank('');
+    setCardBrand('visa');
+    setCardClosing('');
+    setCardDue('');
+    setCardLast4('');
+    setCardColor('');
     setShowCardForm(true);
   };
 
