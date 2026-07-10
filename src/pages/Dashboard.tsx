@@ -13,31 +13,56 @@ interface DashboardProps {
 export default function Dashboard({ onNavigate, onEdit }: DashboardProps) {
   const { state, monthlyIncome, monthlyExpenses, monthlyBalance, formatCurrency, updateSettings } = useApp();
 
+  const displayBudget = state.settings.displayCurrency === 'USD'
+    ? (state.settings.monthlyBudget / state.settings.exchangeRate)
+    : state.settings.monthlyBudget;
+
   const [isEditingBudget, setIsEditingBudget] = useState(false);
-  const [tempBudget, setTempBudget] = useState(state.settings.monthlyBudget ? state.settings.monthlyBudget.toLocaleString('es-AR') : '0');
+  const [tempBudget, setTempBudget] = useState(displayBudget ? displayBudget.toLocaleString('es-AR', { maximumFractionDigits: 2 }) : '0');
+
+  const formatBudgetInput = (inputValue: string) => {
+    let absoluteVal = inputValue;
+    if (absoluteVal.endsWith('.')) {
+      absoluteVal = absoluteVal.slice(0, -1) + ',';
+    }
+    const cleanInput = absoluteVal.replace(/\./g, '');
+    const parts = cleanInput.split(',');
+    const integerClean = parts[0].replace(/\D/g, '');
+    if (!integerClean && parts.length === 1) return '';
+
+    const integerFormatted = integerClean ? parseInt(integerClean, 10).toLocaleString('es-AR') : '0';
+
+    if (parts.length > 1) {
+      const decimalClean = parts[1].replace(/\D/g, '').substring(0, 2);
+      return `${integerFormatted},${decimalClean}`;
+    }
+    return integerFormatted;
+  };
 
   const handleEditBudget = () => {
-    setTempBudget(state.settings.monthlyBudget ? state.settings.monthlyBudget.toLocaleString('es-AR') : '0');
+    setTempBudget(displayBudget ? displayBudget.toLocaleString('es-AR', { maximumFractionDigits: 2 }) : '0');
     setIsEditingBudget(true);
   };
 
   const saveBudget = () => {
-    const val = parseFloat(tempBudget.replace(/\./g, ''));
+    const cleanAmountStr = tempBudget.replace(/\./g, '').replace(',', '.');
+    const val = parseFloat(cleanAmountStr);
     if (!isNaN(val) && val >= 0) {
-      updateSettings({ monthlyBudget: val });
+      const budgetInBase = state.settings.displayCurrency === 'USD'
+        ? val * state.settings.exchangeRate
+        : val;
+      updateSettings({ monthlyBudget: budgetInBase });
       setIsEditingBudget(false);
     }
   };
 
   const recentTransactions = state.transactions.slice(0, 5);
 
-
-
-  const budgetUsed = state.settings.monthlyBudget > 0
-    ? Math.min((monthlyExpenses / state.settings.monthlyBudget) * 100, 100)
+  const budgetUsed = displayBudget > 0
+    ? Math.min((monthlyExpenses / displayBudget) * 100, 100)
     : 0;
   
-  const remainingBudget = Math.max(state.settings.monthlyBudget - monthlyExpenses, 0);
+  const remainingBudget = Math.max(displayBudget - monthlyExpenses, 0);
 
   const navigateWithMonth = (tab: 'expenses' | 'income', categoryId?: string) => {
     const d = new Date();
@@ -67,8 +92,7 @@ export default function Dashboard({ onNavigate, onEdit }: DashboardProps) {
                   className="budget-input-field"
                   value={tempBudget}
                   onChange={e => {
-                    const val = e.target.value.replace(/\D/g, '');
-                    setTempBudget(val ? parseInt(val, 10).toLocaleString('es-AR') : '');
+                    setTempBudget(formatBudgetInput(e.target.value));
                   }}
                   autoFocus
                 />
@@ -156,7 +180,7 @@ export default function Dashboard({ onNavigate, onEdit }: DashboardProps) {
                 : `Has utilizado el ${Math.round(budgetUsed)}%`}
             </span>
             <span style={{ opacity: 0.7 }}>
-              de {formatCurrency(state.settings.monthlyBudget)}
+              de {formatCurrency(displayBudget)}
             </span>
           </div>
         </div>

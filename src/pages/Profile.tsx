@@ -209,11 +209,33 @@ export default function Profile() {
     }
   }, [settings?.exchangeRate]);
 
-  useEffect(() => {
-    if (settings?.monthlyBudget !== undefined) {
-      setBudgetInput(settings.monthlyBudget.toLocaleString('es-AR'));
+  const formatBudgetInput = (inputValue: string) => {
+    let absoluteVal = inputValue;
+    if (absoluteVal.endsWith('.')) {
+      absoluteVal = absoluteVal.slice(0, -1) + ',';
     }
-  }, [settings?.monthlyBudget]);
+    const cleanInput = absoluteVal.replace(/\./g, '');
+    const parts = cleanInput.split(',');
+    const integerClean = parts[0].replace(/\D/g, '');
+    if (!integerClean && parts.length === 1) return '';
+
+    const integerFormatted = integerClean ? parseInt(integerClean, 10).toLocaleString('es-AR') : '0';
+
+    if (parts.length > 1) {
+      const decimalClean = parts[1].replace(/\D/g, '').substring(0, 2);
+      return `${integerFormatted},${decimalClean}`;
+    }
+    return integerFormatted;
+  };
+
+  useEffect(() => {
+    if (settings?.monthlyBudget !== undefined && settings?.exchangeRate) {
+      const displayBudgetVal = settings.displayCurrency === 'USD'
+        ? (settings.monthlyBudget / settings.exchangeRate)
+        : settings.monthlyBudget;
+      setBudgetInput(displayBudgetVal.toLocaleString('es-AR', { maximumFractionDigits: 2 }));
+    }
+  }, [settings?.monthlyBudget, settings?.displayCurrency, settings?.exchangeRate]);
 
   useEffect(() => {
     setNewName(getDisplayName());
@@ -243,9 +265,13 @@ export default function Profile() {
   };
 
   const handleUpdateBudget = () => {
-    const budget = parseFloat(budgetInput.replace(/\./g, ''));
+    const cleanAmountStr = budgetInput.replace(/\./g, '').replace(',', '.');
+    const budget = parseFloat(cleanAmountStr);
     if (!isNaN(budget) && budget >= 0) {
-      updateSettings({ monthlyBudget: budget });
+      const budgetInBase = settings.displayCurrency === 'USD'
+        ? budget * settings.exchangeRate
+        : budget;
+      updateSettings({ monthlyBudget: budgetInBase });
     }
   };
 
@@ -531,8 +557,7 @@ export default function Profile() {
                     inputMode="numeric"
                     value={budgetInput}
                     onChange={(e) => {
-                      const val = e.target.value.replace(/\D/g, '');
-                      setBudgetInput(val ? parseInt(val, 10).toLocaleString('es-AR') : '');
+                      setBudgetInput(formatBudgetInput(e.target.value));
                     }}
                     onBlur={handleUpdateBudget}
                   />
