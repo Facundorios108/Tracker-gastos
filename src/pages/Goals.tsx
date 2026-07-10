@@ -109,8 +109,17 @@ export default function Goals() {
 
 
 
+  const formatNumberWithSeparators = (inputValue: string) => {
+    const isNegative = inputValue.startsWith('-');
+    const cleanValue = inputValue.replace(/\D/g, '');
+    if (!cleanValue) return isNegative ? '-' : '';
+    const formatted = parseInt(cleanValue, 10).toLocaleString('es-AR');
+    return isNegative ? `-${formatted}` : formatted;
+  };
+
   const handleAddDeposit = (fundId: string) => {
-    const val = parseFloat(depositAmount);
+    const cleanAmountStr = depositAmount.replace(/\./g, '');
+    const val = parseFloat(cleanAmountStr);
     if (!depositAmount || isNaN(val) || val === 0) return;
     const fund = state.funds.find(f => f.id === fundId);
     if (!fund) return;
@@ -173,7 +182,7 @@ export default function Goals() {
   const handleEditFund = (fund: FundAllocation) => {
     setEditingFundId(fund.id);
     setFundTitle(fund.title);
-    setFundAmount(fund.amount.toString());
+    setFundAmount(fund.amount.toLocaleString('es-AR'));
     setFundCurrency(fund.currency || 'ARS');
     setFundEmoji(Math.max(0, FUND_EMOJIS.indexOf(fund.emoji)));
     setFundColor(Math.max(0, FUND_COLORS.indexOf(fund.color)));
@@ -181,8 +190,9 @@ export default function Goals() {
   };
 
   const handleSaveFund = () => {
-    if (!fundTitle || !fundAmount || isNaN(parseFloat(fundAmount))) return;
-    const amountVal = parseFloat(fundAmount);
+    const cleanAmountStr = fundAmount.replace(/\./g, '');
+    if (!fundTitle || !fundAmount || isNaN(parseFloat(cleanAmountStr))) return;
+    const amountVal = parseFloat(cleanAmountStr);
     
     if (editingFundId) {
       const existingFund = state.funds.find(f => f.id === editingFundId);
@@ -516,9 +526,9 @@ export default function Goals() {
               <div className="goal-form__section">
                 <label className="goal-form__label">Monto asignado</label>
                 <div className="goal-form__row">
-                  <input type="number" className="goal-form__input"
-                    placeholder="0.00" value={fundAmount}
-                    onChange={e => setFundAmount(e.target.value)} />
+                  <input type="text" inputMode="numeric" className="goal-form__input"
+                    placeholder="0" value={fundAmount}
+                    onChange={e => setFundAmount(formatNumberWithSeparators(e.target.value))} />
                   <select className="goal-form__select bounce-effect" value={fundCurrency}
                     onChange={e => setFundCurrency(e.target.value as 'ARS' | 'USD')}>
                     <option value="ARS">ARS</option>
@@ -646,11 +656,12 @@ export default function Goals() {
                       </h5>
                       <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
                         <input 
-                          type="number" 
+                          type="text" 
+                          inputMode="numeric"
                           className="goal-form__input" 
                           placeholder="Monto (+ o -)"
                           value={depositAmount}
-                          onChange={e => setDepositAmount(e.target.value)}
+                          onChange={e => setDepositAmount(formatNumberWithSeparators(e.target.value))}
                           style={{ flex: 1, padding: '8px 10px', fontSize: '13px' }}
                         />
                         <input 
