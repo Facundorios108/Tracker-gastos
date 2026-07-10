@@ -53,6 +53,7 @@ const defaultState: AppState = {
   isLoading: true,
 };
 
+let pendingSettings: Partial<UserSettings> = {};
 let settingsSaveTimeout: any = null;
 
 /* ── Actions ── */
@@ -649,17 +650,30 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const updateSettings = async (nextSettings: Partial<UserSettings>) => {
-    const mergedSettings = { ...state.settings, ...nextSettings };
+    pendingSettings = { ...pendingSettings, ...nextSettings };
     
+    // Optimistic local update
     dispatch({ type: 'SET_SETTINGS', payload: nextSettings });
-    localStorage.setItem('app_settings', JSON.stringify(mergedSettings));
+    
+    // Note: We don't write to localStorage here because the reducer state isn't available synchronously.
+    // The onSnapshot listener will update localStorage when the DB updates.
+    // If we wanted to, we could read current localStorage and merge, but it's not strictly necessary.
 
     if (state.user) {
       if (settingsSaveTimeout) clearTimeout(settingsSaveTimeout);
       settingsSaveTimeout = setTimeout(() => {
-        setDoc(doc(db, 'users', state.user.uid), { settings: mergedSettings }, { merge: true })
+        const settingsToSave = { ...pendingSettings };
+        pendingSettings = {};
+        setDoc(doc(db, 'users', state.user.uid), { settings: settingsToSave }, { merge: true })
           .catch(err => console.error("Firebase sync error:", err));
       }, 1000);
+    } else {
+      // For guest mode, we must update localStorage immediately
+      try {
+        const local = localStorage.getItem('app_settings');
+        const current = local ? JSON.parse(local) : defaultSettings;
+        localStorage.setItem('app_settings', JSON.stringify({ ...current, ...nextSettings }));
+      } catch (e) {}
     }
   };
 
