@@ -135,7 +135,7 @@ export default function Expenses({ onEdit, initialFilters }: ExpensesProps) {
     <div className="expenses-page">
       <header className="expenses-page__header animate-slide-up">
         <div className="header-top-row">
-          <h1>Mis Gastos</h1>
+          <h1>Gastos</h1>
           {hasActiveFilters && (
             <button className="clear-filters-btn bounce-effect" onClick={resetFilters}>
               Limpiar filtros

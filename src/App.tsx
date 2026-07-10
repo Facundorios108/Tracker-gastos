@@ -3,16 +3,16 @@ import { AppProvider, useApp } from './context/AppContext';
 import BottomNav from './components/BottomNav';
 import TransactionModal from './components/TransactionModal';
 import Dashboard from './pages/Dashboard';
-import Expenses from './pages/Expenses';
-import Income from './pages/Income';
+import Transactions from './pages/Transactions';
 import Goals from './pages/Goals';
 import Profile from './pages/Profile';
 import Cards from './pages/Cards';
 import Login from './pages/Login';
+import Analytics from './pages/Analytics';
 import type { Transaction } from './types';
 import './styles/global.css';
 
-type Tab = 'dashboard' | 'expenses' | 'income' | 'goals' | 'cards' | 'profile';
+type Tab = 'dashboard' | 'transactions' | 'goals' | 'cards' | 'profile' | 'analytics';
 
 function AppContent() {
   const { state } = useApp();
@@ -25,7 +25,9 @@ function AppContent() {
   const [prefilledData, setPrefilledData] = useState<Partial<Transaction> | null>(null);
 
   const handleFabClick = () => {
-    setModalType(activeTab === 'income' ? 'income' : 'expense');
+    // Determine which modal to show based on the active tab/filters
+    const type = (activeTab === 'transactions' && navFilters?.type === 'income') ? 'income' : 'expense';
+    setModalType(type);
     setEditingTransaction(null);
     setPrefilledData(null);
     setShowModal(true);
@@ -56,16 +58,20 @@ function AppContent() {
     switch (activeTab) {
       case 'dashboard':
         return <Dashboard onNavigate={handleNavigate} onEdit={handleEdit} />;
-      case 'expenses':
-        return <Expenses onEdit={handleEdit} initialFilters={navFilters} />;
-      case 'income':
-        return <Income onEdit={handleEdit} initialFilters={navFilters} />;
+      case 'transactions':
+        return <Transactions 
+                 onEdit={handleEdit} 
+                 initialFilters={navFilters} 
+                 onSubTabChange={(type) => setNavFilters({ ...navFilters, type })}
+               />;
       case 'goals':
         return <Goals />;
       case 'cards':
         return <Cards onEdit={handleEdit} onAddExpense={handleAddExpenseForCard} />;
       case 'profile':
         return <Profile />;
+      case 'analytics':
+        return <Analytics onBack={() => handleNavigate('dashboard')} />;
     }
   };
 

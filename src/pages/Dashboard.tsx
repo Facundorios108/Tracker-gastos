@@ -1,13 +1,9 @@
-import { useState, useMemo } from 'react';
-import { TrendingUp, TrendingDown, ArrowRight, Pencil, ChevronRight } from 'lucide-react';
+import { useState } from 'react';
+import { TrendingUp, TrendingDown, ArrowRight, Pencil, ChevronRight, PieChart } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { getCategoryConfig } from '../types';
 import { formatDate } from '../utils';
-import { Doughnut } from 'react-chartjs-2';
-import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
 import './Dashboard.css';
-
-ChartJS.register(ArcElement, Tooltip, Legend);
 
 interface DashboardProps {
   onNavigate: (tab: any, filters?: any) => void;
@@ -15,7 +11,7 @@ interface DashboardProps {
 }
 
 export default function Dashboard({ onNavigate, onEdit }: DashboardProps) {
-  const { state, monthlyIncome, monthlyExpenses, monthlyBalance, formatCurrency, convertToDisplay, updateSettings } = useApp();
+  const { state, monthlyIncome, monthlyExpenses, monthlyBalance, formatCurrency, updateSettings } = useApp();
 
   const [isEditingBudget, setIsEditingBudget] = useState(false);
   const [tempBudget, setTempBudget] = useState(state.settings.monthlyBudget ? state.settings.monthlyBudget.toLocaleString('es-AR') : '0');
@@ -35,70 +31,7 @@ export default function Dashboard({ onNavigate, onEdit }: DashboardProps) {
 
   const recentTransactions = state.transactions.slice(0, 5);
 
-  const categoryBreakdown = useMemo(() => {
-    const now = new Date();
-    const monthExpenses = state.transactions.filter(t => {
-      const d = new Date(t.date);
-      return t.type === 'expense' && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-    });
 
-    const byCategory = new Map<string, number>();
-    monthExpenses.forEach(t => {
-      const displayAmount = convertToDisplay(t.amount, t.currency);
-      byCategory.set(t.category, (byCategory.get(t.category) || 0) + displayAmount);
-    });
-
-    const total = Array.from(byCategory.values()).reduce((sum, val) => sum + val, 0);
-    return Array.from(byCategory.entries())
-      .map(([catId, amount]) => ({
-        ...getCategoryConfig(catId),
-        amount,
-        percentage: total > 0 ? Math.round((amount / total) * 100) : 0,
-      }))
-      .sort((a, b) => b.amount - a.amount);
-  }, [state.transactions]);
-
-  const chartData = useMemo(() => ({
-    labels: categoryBreakdown.map(c => c.label),
-    datasets: [{
-      data: categoryBreakdown.map(c => c.amount),
-      backgroundColor: categoryBreakdown.map(c => c.color),
-      hoverBackgroundColor: categoryBreakdown.map(c => c.color),
-      borderWidth: 0,
-      borderRadius: 12,
-      spacing: 6,
-      cutout: '82%',
-    }],
-  }), [categoryBreakdown]);
-
-  const chartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        display: false,
-      },
-      tooltip: {
-        enabled: true,
-        backgroundColor: 'rgba(15, 23, 42, 0.9)',
-        titleFont: { size: 14, weight: 'bold' as const, family: 'Outfit' },
-        bodyFont: { size: 13, family: 'Outfit' },
-        padding: 12,
-        displayColors: true,
-        boxPadding: 6,
-        cornerRadius: 12,
-        callbacks: {
-          label: (ctx: any) => ` ${formatCurrency(ctx.parsed)}`,
-        },
-      },
-    },
-    animation: {
-      animateRotate: true,
-      animateScale: true,
-      duration: 2000,
-      easing: 'easeOutQuart' as const,
-    },
-  };
 
   const budgetUsed = state.settings.monthlyBudget > 0
     ? Math.min((monthlyExpenses / state.settings.monthlyBudget) * 100, 100)
@@ -109,7 +42,7 @@ export default function Dashboard({ onNavigate, onEdit }: DashboardProps) {
   const navigateWithMonth = (tab: 'expenses' | 'income', categoryId?: string) => {
     const d = new Date();
     const month = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}`;
-    onNavigate(tab, { month, category: categoryId });
+    onNavigate('transactions', { type: tab, month, category: categoryId });
   };
 
   return (
@@ -149,20 +82,31 @@ export default function Dashboard({ onNavigate, onEdit }: DashboardProps) {
       )}
   
       {/* ── Header ── */}
-      <header className="dashboard__header animate-slide-up" style={{ justifyContent: 'center' }}>
-        <div className="dashboard__logo-header" style={{ display: 'flex', alignItems: 'center' }}>
+      <header className="dashboard__header animate-slide-up" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="dashboard__logo-header" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div className="brand-logo bounce-effect" style={{ width: '48px', height: '48px', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', boxShadow: '0 8px 16px rgba(0,0,0,0.2)' }}>
             <img src="/logo.svg" alt="My Wallet" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', height: '48px' }}>
+            <span style={{ fontSize: '14px', color: 'var(--color-text-secondary)', fontWeight: 500, lineHeight: '1.2' }}>Bienvenido,</span>
+            <span style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--color-text)', lineHeight: '1.2', marginTop: '2px' }}>
+              {state.settings.name && state.settings.name !== 'Invitado' ? state.settings.name : (state.user?.displayName || 'Usuario')}
+            </span>
           </div>
         </div>
       </header>
   
       {/* ── Balance Card ── */}
       <div className="balance-card animate-slide-up stagger-1">
-        <div>
+        <div 
+          style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px' }} 
+          onClick={() => onNavigate('analytics')}
+          className="bounce-effect"
+        >
           <div className="balance-card__amount">
             {formatCurrency(monthlyBalance)}
           </div>
+          <PieChart size={24} style={{ opacity: 0.8 }} />
         </div>
         
         <div className="balance-card__row">
@@ -222,7 +166,7 @@ export default function Dashboard({ onNavigate, onEdit }: DashboardProps) {
       <section className="dashboard__section animate-slide-up stagger-2">
         <div className="section-header">
           <h3>Movimientos</h3>
-          <button className="section-header__link bounce-effect" onClick={() => onNavigate('expenses')}>
+          <button className="section-header__link bounce-effect" onClick={() => onNavigate('transactions', { type: 'expenses' })}>
             Ver todos <ArrowRight size={14} />
           </button>
         </div>
@@ -261,88 +205,6 @@ export default function Dashboard({ onNavigate, onEdit }: DashboardProps) {
           </div>
         </div>
       </section>
-
-      {/* ── Monthly Summary ── */}
-      {categoryBreakdown.length > 0 && (
-        <section className="dashboard__section animate-slide-up stagger-3">
-          <div className="section-header">
-            <h3>Distribución</h3>
-          </div>
-          <div className="glass-container">
-            <div className="summary-card-premium">
-              <div className="chart-wrapper-premium">
-                {categoryBreakdown.length > 0 ? (
-                  <Doughnut data={chartData} options={chartOptions} />
-                ) : (
-                  <div className="empty-chart-placeholder">No hay datos</div>
-                )}
-                <div className="chart-inner-data">
-                  <span className="chart-inner-label">Egresos</span>
-                  <span className="chart-inner-value">{formatCurrency(monthlyExpenses)}</span>
-                </div>
-              </div>
-              <div className="breakdown-list" style={{ maxHeight: '200px', overflowY: 'auto' }}>
-                {categoryBreakdown.map(cat => (
-                  <div 
-                    key={cat.id} 
-                    className="breakdown-item bounce-effect" 
-                    onClick={() => navigateWithMonth('expenses', cat.id)}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    <div className="breakdown-color" style={{ backgroundColor: cat.color }} />
-                    <div className="breakdown-info">
-                      <span className="breakdown-name">{cat.emoji} {cat.label}</span>
-                      <div className="breakdown-meta">
-                        <span className="breakdown-percent">{cat.percentage}%</span>
-                        <span className="breakdown-amount">{formatCurrency(cat.amount)}</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* ── Savings Goals ── */}
-      {state.goals.length > 0 && (
-        <section className="dashboard__section animate-slide-up stagger-4">
-          <div className="section-header">
-            <h3>Tus Metas</h3>
-            <button className="section-header__link bounce-effect" onClick={() => onNavigate('goals')}>
-              Explorar <ChevronRight size={14} />
-            </button>
-          </div>
-          <div className="goals-preview-row">
-            {state.goals.map(goal => {
-              const progress = Math.min((goal.currentAmount / goal.targetAmount) * 100, 100);
-              return (
-                <div key={goal.id} className="goal-card-premium" style={{ '--goal-color': goal.color } as React.CSSProperties}>
-                  <div className="goal-header-premium">
-                    <div className="goal-emoji-box">
-                      <span>{goal.emoji}</span>
-                    </div>
-                    <span className="goal-title-premium">{goal.title}</span>
-                  </div>
-                  <div className="goal-progress-box">
-                    <div className="goal-progress-track">
-                      <div
-                        className="goal-progress-fill"
-                        style={{ width: `${progress}%` }}
-                      />
-                    </div>
-                    <div className="goal-footer-premium">
-                      <span className="goal-current-amount">{formatCurrency(goal.currentAmount)}</span>
-                      <span className="goal-target-amount">Objetivo: {formatCurrency(goal.targetAmount)}</span>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-      )}
     </div>
   );
 }

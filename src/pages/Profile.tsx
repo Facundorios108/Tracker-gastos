@@ -680,14 +680,17 @@ export default function Profile() {
 
       {/* Tarjetas Modal */}
       {showCardsModal && (
-        <div className="modal-overlay" onClick={() => setShowCardsModal(false)}>
-          <div className="modal-content profile-modal animate-slide-up" onClick={e => e.stopPropagation()}>
+        <div className="modal-backdrop" onClick={() => setShowCardsModal(false)}>
+          <div className="modal-sheet animate-slide-up" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h2>Mis Tarjetas de Crédito</h2>
-              <button className="close-btn" onClick={() => setShowCardsModal(false)}>×</button>
+              <div style={{ width: 40 }} />
+              <h3 className="modal-content__title">Mis Tarjetas</h3>
+              <button className="modal-header__close bounce-effect" onClick={() => setShowCardsModal(false)}>
+                <ChevronRight size={24} style={{ transform: 'rotate(90deg)' }} />
+              </button>
             </div>
             
-            <div className="modal-body">
+            <div className="modal-content" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
               {!showCardForm ? (
                 <>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
