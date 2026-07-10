@@ -234,12 +234,9 @@ export default function Analytics({ onBack }: AnalyticsProps) {
               <p>Ingresos</p>
               <h4>{formatCurrency(totalIncome)}</h4>
               {incomeMoM !== null && (
-                <div className="mom-badge-container">
-                  <span className={`mom-badge mom-badge--${incomeMoM >= 0 ? 'up' : 'down'}`}>
-                    {incomeMoM >= 0 ? '▲' : '▼'} {formatPercentage(incomeMoM)}
-                  </span>
-                  <span className="mom-badge-text">vs mes ant.</span>
-                </div>
+                <span className={`mom-badge mom-badge--${incomeMoM >= 0 ? 'up' : 'down'}`}>
+                  {incomeMoM >= 0 ? '▲ +' : '▼ '}{formatPercentage(incomeMoM)} vs mes ant.
+                </span>
               )}
             </div>
           </div>
@@ -251,12 +248,9 @@ export default function Analytics({ onBack }: AnalyticsProps) {
               <p>Gastos</p>
               <h4>{formatCurrency(totalExpenses)}</h4>
               {expensesMoM !== null && (
-                <div className="mom-badge-container">
-                  <span className={`mom-badge mom-badge--${expensesMoM <= 0 ? 'down-good' : 'up-bad'}`}>
-                    {expensesMoM >= 0 ? '▲' : '▼'} {formatPercentage(expensesMoM)}
-                  </span>
-                  <span className="mom-badge-text">vs mes ant.</span>
-                </div>
+                <span className={`mom-badge mom-badge--${expensesMoM <= 0 ? 'down-good' : 'up-bad'}`}>
+                  {expensesMoM >= 0 ? '▲ +' : '▼ '}{formatPercentage(expensesMoM)} vs mes ant.
+                </span>
               )}
             </div>
           </div>

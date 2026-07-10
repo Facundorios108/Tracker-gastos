@@ -31,9 +31,13 @@ export default function Goals() {
   const [addAmount, setAddAmount] = useState('');
   const [editingGoalId, setEditingGoalId] = useState<string | null>(null);
 
-  // ── Fund inline add/subtract state ──
-  const [addAmountFundId, setAddAmountFundId] = useState<string | null>(null);
-  const [addFundAmount, setAddFundAmount] = useState('');
+
+
+  // ── Expanded fund & deposits state ──
+  const [expandedFundId, setExpandedFundId] = useState<string | null>(null);
+  const [depositAmount, setDepositAmount] = useState('');
+  const [depositDate, setDepositDate] = useState(new Date().toISOString().split('T')[0]);
+  const [depositNotes, setDepositNotes] = useState('');
 
   // ── Funds state ──
   const [showFundForm, setShowFundForm] = useState(false);
@@ -103,14 +107,61 @@ export default function Goals() {
     setAddAmount(''); setAddAmountGoalId(null);
   };
 
-  const handleAddToFund = (fundId: string) => {
-    const val = parseFloat(addFundAmount);
-    if (!addFundAmount || isNaN(val) || val === 0) return;
+
+
+  const handleAddDeposit = (fundId: string) => {
+    const val = parseFloat(depositAmount);
+    if (!depositAmount || isNaN(val) || val === 0) return;
     const fund = state.funds.find(f => f.id === fundId);
     if (!fund) return;
-    const newAmount = Math.max(0, fund.amount + val);
-    updateFund({ ...fund, amount: newAmount });
-    setAddFundAmount(''); setAddAmountFundId(null);
+
+    const currentDeposits = fund.deposits || [{
+      id: generateId(),
+      amount: fund.amount,
+      date: new Date().toISOString().split('T')[0],
+      notes: 'Monto inicial'
+    }];
+
+    const newDeposit = {
+      id: generateId(),
+      amount: val,
+      date: depositDate,
+      notes: depositNotes.trim() || undefined
+    };
+
+    const updatedDeposits = [...currentDeposits, newDeposit];
+    const newAmount = Math.max(0, updatedDeposits.reduce((sum, d) => sum + d.amount, 0));
+
+    updateFund({
+      ...fund,
+      amount: newAmount,
+      deposits: updatedDeposits
+    });
+
+    setDepositAmount('');
+    setDepositNotes('');
+    setDepositDate(new Date().toISOString().split('T')[0]);
+  };
+
+  const handleDeleteDeposit = (fundId: string, depositId: string) => {
+    const fund = state.funds.find(f => f.id === fundId);
+    if (!fund) return;
+
+    const currentDeposits = fund.deposits || [{
+      id: generateId(),
+      amount: fund.amount,
+      date: new Date().toISOString().split('T')[0],
+      notes: 'Monto inicial'
+    }];
+
+    const updatedDeposits = currentDeposits.filter(d => d.id !== depositId);
+    const newAmount = Math.max(0, updatedDeposits.reduce((sum, d) => sum + d.amount, 0));
+
+    updateFund({
+      ...fund,
+      amount: newAmount,
+      deposits: updatedDeposits
+    });
   };
 
   // ── Fund handlers ──
@@ -131,17 +182,59 @@ export default function Goals() {
 
   const handleSaveFund = () => {
     if (!fundTitle || !fundAmount || isNaN(parseFloat(fundAmount))) return;
-    const fundData: FundAllocation = {
-      id: editingFundId || generateId(),
-      title: fundTitle,
-      amount: parseFloat(fundAmount),
-      emoji: FUND_EMOJIS[fundEmoji],
-      color: FUND_COLORS[fundColor],
-      currency: fundCurrency,
-    };
+    const amountVal = parseFloat(fundAmount);
+    
     if (editingFundId) {
-      updateFund(fundData);
+      const existingFund = state.funds.find(f => f.id === editingFundId);
+      if (existingFund) {
+        const currentDeposits = existingFund.deposits || [{
+          id: generateId(),
+          amount: existingFund.amount,
+          date: new Date().toISOString().split('T')[0],
+          notes: 'Monto inicial'
+        }];
+        
+        const totalDepositsSum = currentDeposits.reduce((sum, d) => sum + d.amount, 0);
+        let finalDeposits = [...currentDeposits];
+        
+        if (amountVal !== totalDepositsSum) {
+          const diff = amountVal - totalDepositsSum;
+          finalDeposits.push({
+            id: generateId(),
+            amount: diff,
+            date: new Date().toISOString().split('T')[0],
+            notes: 'Ajuste de saldo manual'
+          });
+        }
+        
+        const fundData: FundAllocation = {
+          ...existingFund,
+          title: fundTitle,
+          amount: amountVal,
+          emoji: FUND_EMOJIS[fundEmoji],
+          color: FUND_COLORS[fundColor],
+          currency: fundCurrency,
+          deposits: finalDeposits
+        };
+        updateFund(fundData);
+      }
     } else {
+      const deposits = amountVal > 0 ? [{
+        id: generateId(),
+        amount: amountVal,
+        date: new Date().toISOString().split('T')[0],
+        notes: 'Monto inicial'
+      }] : [];
+      
+      const fundData: FundAllocation = {
+        id: generateId(),
+        title: fundTitle,
+        amount: amountVal,
+        emoji: FUND_EMOJIS[fundEmoji],
+        color: FUND_COLORS[fundColor],
+        currency: fundCurrency,
+        deposits
+      };
       addFund(fundData);
     }
     resetFundForm();
@@ -467,53 +560,127 @@ export default function Goals() {
           <div className="goals-list">
             {state.funds.map((fund, i) => (
               <div key={fund.id}
-                className={`fund-card animate-slide-up stagger-${Math.min(i + 1, 5)}`}
-                style={{ '--fund-color': fund.color } as React.CSSProperties}>
-                <div className="fund-card__left">
-                  <div className="fund-card__emoji-container">
-                    <span>{fund.emoji}</span>
+                className={`fund-card animate-slide-up ${expandedFundId === fund.id ? 'fund-card--expanded' : ''} stagger-${Math.min(i + 1, 5)}`}
+                onClick={(e) => {
+                  const target = e.target as HTMLElement;
+                  if (target.closest('button') || target.closest('input') || target.closest('select')) return;
+                  setExpandedFundId(expandedFundId === fund.id ? null : fund.id);
+                }}
+                style={{ 
+                  '--fund-color': fund.color,
+                  cursor: 'pointer'
+                } as React.CSSProperties}>
+                <div style={{ display: 'flex', width: '100%', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
+                  <div className="fund-card__left">
+                    <div className="fund-card__emoji-container">
+                      <span>{fund.emoji}</span>
+                    </div>
+                    <div className="fund-card__info">
+                      <h3 className="fund-card__title">{fund.title}</h3>
+                      <p className="fund-card__currency">{fund.currency}</p>
+                    </div>
                   </div>
-                  <div className="fund-card__info">
-                    <h3 className="fund-card__title">{fund.title}</h3>
-                    <p className="fund-card__currency">{fund.currency}</p>
+                  <div className="fund-card__right">
+                    <span className="fund-card__amount">
+                      {formatCurrency(fund.amount, fund.currency)}
+                    </span>
+                    <div className="fund-card__actions">
+                      <button className="goal-card__delete-btn bounce-effect"
+                        onClick={() => {
+                          setExpandedFundId(expandedFundId === fund.id ? null : fund.id);
+                        }} aria-label="Ver detalles"
+                        style={{ color: 'var(--color-text-secondary)', transform: expandedFundId === fund.id ? 'rotate(180deg)' : 'none', transition: 'all 0.2s' }}>
+                        <PiggyBank size={16} />
+                      </button>
+                      <button className="goal-card__delete-btn bounce-effect"
+                        onClick={() => handleEditFund(fund)} aria-label="Editar"
+                        style={{ color: 'var(--color-text-secondary)' }}>
+                        <Pencil size={16} />
+                      </button>
+                      <button className="goal-card__delete-btn bounce-effect"
+                        onClick={() => setPendingDelete({ type: 'fund', id: fund.id })} aria-label="Eliminar">
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
                   </div>
                 </div>
-                <div className="fund-card__right">
-                  <span className="fund-card__amount">
-                    {formatCurrency(fund.amount, fund.currency)}
-                  </span>
-                  <div className="fund-card__actions">
-                    <button className="goal-card__delete-btn bounce-effect"
-                      onClick={() => {
-                        setAddAmountFundId(addAmountFundId === fund.id ? null : fund.id);
-                        setAddFundAmount('');
-                      }} aria-label="Ajustar monto"
-                      style={{ color: 'var(--color-text-secondary)' }}>
-                      <PiggyBank size={16} />
-                    </button>
-                    <button className="goal-card__delete-btn bounce-effect"
-                      onClick={() => handleEditFund(fund)} aria-label="Editar"
-                      style={{ color: 'var(--color-text-secondary)' }}>
-                      <Pencil size={16} />
-                    </button>
-                    <button className="goal-card__delete-btn bounce-effect"
-                      onClick={() => setPendingDelete({ type: 'fund', id: fund.id })} aria-label="Eliminar">
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                </div>
-                {addAmountFundId === fund.id && (
-                  <div className="goal-add-inline animate-scale-in" style={{ marginTop: '12px' }}>
-                    <input type="number" className="goal-add-input" placeholder="Monto (negativo = retirar)"
-                      value={addFundAmount} onChange={e => setAddFundAmount(e.target.value)} autoFocus />
-                    <button className={`goal-add-confirm bounce-effect ${addFundAmount && parseFloat(addFundAmount) < 0 ? 'goal-add-confirm--withdraw' : ''}`}
-                      onClick={() => handleAddToFund(fund.id)} disabled={!addFundAmount || parseFloat(addFundAmount) === 0}>
-                      {addFundAmount && parseFloat(addFundAmount) < 0 ? 'Retirar' : 'Sumar'}
-                    </button>
-                    <button className="goal-add-cancel bounce-effect"
-                      onClick={() => { setAddAmountFundId(null); setAddFundAmount(''); }}>
-                      <X size={18} />
-                    </button>
+
+                {expandedFundId === fund.id && (
+                  <div className="fund-details animate-scale-in" style={{ width: '100%', marginTop: '16px', borderTop: '1px solid var(--color-glass-border)', paddingTop: '16px' }} onClick={e => e.stopPropagation()}>
+                    <h4 style={{ fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--color-text-secondary)', marginBottom: '10px' }}>
+                      Historial de Asignaciones
+                    </h4>
+                    
+                    <div className="fund-deposits-list" style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px', width: '100%' }}>
+                      {(fund.deposits || (fund.amount > 0 ? [{ id: 'initial', amount: fund.amount, date: new Date().toISOString().split('T')[0], notes: 'Monto inicial' }] : [])).map((dep) => (
+                        <div key={dep.id} className="fund-deposit-item" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--color-surface-container-low)', padding: '8px 12px', borderRadius: '10px', fontSize: '13px' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: 0 }}>
+                            <span style={{ fontWeight: 600, color: 'var(--color-text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{dep.notes || 'Asignación'}</span>
+                            <span style={{ fontSize: '11px', color: 'var(--color-text-tertiary)' }}>{dep.date}</span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                            <span style={{ fontWeight: 700, color: dep.amount >= 0 ? '#10b981' : '#ef4444' }}>
+                              {dep.amount >= 0 ? '+' : ''}{formatCurrency(dep.amount, fund.currency)}
+                            </span>
+                            <button 
+                              className="goal-card__delete-btn bounce-effect"
+                              onClick={() => handleDeleteDeposit(fund.id, dep.id)}
+                              style={{ padding: '2px', color: 'var(--color-text-tertiary)' }}
+                              aria-label="Eliminar asignación"
+                            >
+                              <X size={14} />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                      {(!fund.deposits || fund.deposits.length === 0) && fund.amount === 0 && (
+                        <p style={{ fontSize: '13px', color: 'var(--color-text-tertiary)', fontStyle: 'italic', textAlign: 'center', margin: '8px 0' }}>
+                          No hay asignaciones de dinero registradas.
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="fund-add-deposit-form" style={{ background: 'var(--color-surface-container)', padding: '12px', borderRadius: '14px', display: 'flex', flexDirection: 'column', gap: '10px', width: '100%', boxSizing: 'border-box' }}>
+                      <h5 style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: 'var(--color-text-secondary)', marginBottom: '2px' }}>
+                        Asignar Dinero
+                      </h5>
+                      <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
+                        <input 
+                          type="number" 
+                          className="goal-form__input" 
+                          placeholder="Monto (+ o -)"
+                          value={depositAmount}
+                          onChange={e => setDepositAmount(e.target.value)}
+                          style={{ flex: 1, padding: '8px 10px', fontSize: '13px' }}
+                        />
+                        <input 
+                          type="date" 
+                          className="goal-form__input" 
+                          value={depositDate}
+                          onChange={e => setDepositDate(e.target.value)}
+                          style={{ width: '130px', padding: '8px 10px', fontSize: '13px' }}
+                        />
+                      </div>
+                      <div style={{ display: 'flex', gap: '8px', width: '100%', alignItems: 'center' }}>
+                        <input 
+                          type="text" 
+                          className="goal-form__input" 
+                          placeholder="Notas (ej: Ingreso, Pilates...)"
+                          value={depositNotes}
+                          onChange={e => setDepositNotes(e.target.value)}
+                          maxLength={40}
+                          style={{ flex: 1, padding: '8px 10px', fontSize: '13px' }}
+                        />
+                        <button 
+                          className="goal-form__submit bounce-effect"
+                          onClick={() => handleAddDeposit(fund.id)}
+                          disabled={!depositAmount || parseFloat(depositAmount) === 0}
+                          style={{ width: 'auto', padding: '8px 16px', fontSize: '13px', borderRadius: '10px', margin: 0 }}
+                        >
+                          Asignar
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>

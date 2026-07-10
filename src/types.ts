@@ -60,6 +60,13 @@ export interface SavingsGoal {
   deadline?: string; // ISO date string "YYYY-MM-DD"
 }
 
+export interface FundDeposit {
+  id: string;
+  amount: number;
+  date: string; // YYYY-MM-DD
+  notes?: string;
+}
+
 export interface FundAllocation {
   id: string;
   title: string;
@@ -67,6 +74,7 @@ export interface FundAllocation {
   emoji: string;
   color: string;
   currency: 'ARS' | 'USD';
+  deposits?: FundDeposit[];
 }
 
 export interface UserSettings {

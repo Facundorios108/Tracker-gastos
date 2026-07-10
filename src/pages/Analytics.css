@@ -200,30 +200,17 @@
   min-width: 0;
 }
 
-.mom-badge-container {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 4px;
-}
-
 .mom-badge {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
   font-size: 11px;
-  font-weight: 700;
-  padding: 3px 6px;
-  border-radius: 6px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: var(--radius-full, 9999px);
   width: fit-content;
-  line-height: 1;
-}
-
-.mom-badge-text {
-  font-size: 11px;
-  color: var(--color-text-secondary);
-  opacity: 0.8;
-  font-weight: 500;
+  margin-top: 6px;
+  white-space: nowrap;
 }
 
 .mom-badge--up,
