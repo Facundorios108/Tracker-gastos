@@ -111,14 +111,30 @@ export default function Goals() {
 
   const formatNumberWithSeparators = (inputValue: string) => {
     const isNegative = inputValue.startsWith('-');
-    const cleanValue = inputValue.replace(/\D/g, '');
-    if (!cleanValue) return isNegative ? '-' : '';
-    const formatted = parseInt(cleanValue, 10).toLocaleString('es-AR');
-    return isNegative ? `-${formatted}` : formatted;
+    let absoluteVal = isNegative ? inputValue.substring(1) : inputValue;
+
+    // Convert trailing dot to comma for decimal separator entry
+    if (absoluteVal.endsWith('.')) {
+      absoluteVal = absoluteVal.slice(0, -1) + ',';
+    }
+
+    const cleanInput = absoluteVal.replace(/\./g, '');
+    const parts = cleanInput.split(',');
+    const integerClean = parts[0].replace(/\D/g, '');
+    if (!integerClean && parts.length === 1) return isNegative ? '-' : '';
+
+    const integerFormatted = integerClean ? parseInt(integerClean, 10).toLocaleString('es-AR') : '0';
+
+    if (parts.length > 1) {
+      const decimalClean = parts[1].replace(/\D/g, '').substring(0, 2);
+      return `${isNegative ? '-' : ''}${integerFormatted},${decimalClean}`;
+    }
+
+    return `${isNegative ? '-' : ''}${integerFormatted}`;
   };
 
   const handleAddDeposit = (fundId: string) => {
-    const cleanAmountStr = depositAmount.replace(/\./g, '');
+    const cleanAmountStr = depositAmount.replace(/\./g, '').replace(',', '.');
     const val = parseFloat(cleanAmountStr);
     if (!depositAmount || isNaN(val) || val === 0) return;
     const fund = state.funds.find(f => f.id === fundId);
@@ -190,7 +206,7 @@ export default function Goals() {
   };
 
   const handleSaveFund = () => {
-    const cleanAmountStr = fundAmount.replace(/\./g, '');
+    const cleanAmountStr = fundAmount.replace(/\./g, '').replace(',', '.');
     if (!fundTitle || !fundAmount || isNaN(parseFloat(cleanAmountStr))) return;
     const amountVal = parseFloat(cleanAmountStr);
     
