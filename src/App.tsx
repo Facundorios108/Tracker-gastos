@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { AppProvider, useApp } from './context/AppContext';
 import BottomNav from './components/BottomNav';
 import TransactionModal from './components/TransactionModal';
+import ToastContainer from './components/ToastContainer';
+import SkeletonLoader from './components/SkeletonLoader';
 import Dashboard from './pages/Dashboard';
 import Transactions from './pages/Transactions';
 import Goals from './pages/Goals';
@@ -15,7 +17,7 @@ import './styles/global.css';
 type Tab = 'dashboard' | 'transactions' | 'goals' | 'cards' | 'profile' | 'analytics';
 
 function AppContent() {
-  const { state } = useApp();
+  const { state, toasts, removeToast } = useApp();
   const { user, isLoading } = state;
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
   const [showModal, setShowModal] = useState(false);
@@ -76,12 +78,7 @@ function AppContent() {
   };
 
   if (isLoading) {
-    return (
-      <div className="loading-screen">
-        <div className="spinner"></div>
-        <p>Cargando tus finanzas...</p>
-      </div>
-    );
+    return <SkeletonLoader />;
   }
 
   if (!user) {
@@ -109,6 +106,7 @@ function AppContent() {
         editingTransaction={editingTransaction}
         prefilledData={prefilledData}
       />
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
     </div>
   );
 }

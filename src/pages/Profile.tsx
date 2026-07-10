@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { 
   User, Moon, Sun, DollarSign, LogOut, ChevronRight, 
   Calculator, Trash2, Shield, HelpCircle,
-  Wallet, Edit2, Check, Palette, Type, Download, CreditCard as CreditCardIcon
+  Wallet, Edit2, Check, Palette, Type, Download, Upload, CreditCard as CreditCardIcon
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { getCategoryConfig } from '../types';
@@ -11,7 +11,7 @@ import { exportTransactionsToCSV } from '../utils/exportUtils';
 import './Profile.css';
 
 export default function Profile() {
-  const { state, toggleTheme, signOut, updateSettings, clearAllData, formatCurrency } = useApp();
+  const { state, toggleTheme, signOut, updateSettings, clearAllData, formatCurrency, importBackupData, showToast } = useApp();
   
   // Defensive check for state and settings
   const settings = state?.settings;
@@ -96,6 +96,61 @@ export default function Profile() {
     setCardLast4('');
     setCardColor('');
     setShowCardForm(false);
+  };
+
+  const handleExportJSON = () => {
+    try {
+      const backupData = {
+        transactions: state.transactions || [],
+        goals: state.goals || [],
+        funds: state.funds || [],
+        settings: state.settings || {}
+      };
+      
+      const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
+        JSON.stringify(backupData, null, 2)
+      )}`;
+      
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute('href', jsonString);
+      
+      const now = new Date();
+      const dateString = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      downloadAnchor.setAttribute('download', `copia-seguridad-${dateString}.json`);
+      
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+      
+      showToast('Copia de seguridad descargada', 'success');
+    } catch (err) {
+      showToast('Error al exportar los datos', 'error');
+    }
+  };
+
+  const handleImportJSON = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const fileReader = new FileReader();
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    fileReader.onload = async (event) => {
+      try {
+        const parsedData = JSON.parse(event.target?.result as string);
+        
+        if (!parsedData.transactions || !Array.isArray(parsedData.transactions)) {
+          throw new Error('Estructura inválida de transacciones');
+        }
+
+        if (window.confirm('¿Estás seguro de que querés restaurar esta copia de seguridad? Esto reemplazará todos tus datos actuales.')) {
+          await importBackupData(parsedData);
+        }
+      } catch (err) {
+        showToast('Archivo de copia de seguridad inválido', 'error');
+      }
+    };
+    
+    fileReader.readAsText(file);
+    e.target.value = '';
   };
 
   const openAddCard = () => {
@@ -554,8 +609,43 @@ export default function Profile() {
                 <Download size={20} />
               </div>
               <div className="premium-settings-item__content">
-                <span className="premium-settings-item__label">Exportar Datos</span>
+                <span className="premium-settings-item__label">Exportar CSV</span>
                 <span className="premium-settings-item__value">Descargar movimientos en CSV</span>
+              </div>
+              <ChevronRight size={18} style={{ opacity: 0.5 }} />
+            </button>
+
+            <button 
+              className="premium-settings-item bounce-effect"
+              onClick={handleExportJSON}
+            >
+              <div className="premium-settings-item__icon" style={{ color: 'var(--color-primary)' }}>
+                <Download size={20} />
+              </div>
+              <div className="premium-settings-item__content">
+                <span className="premium-settings-item__label">Exportar Backup</span>
+                <span className="premium-settings-item__value">Descargar copia de seguridad (.json)</span>
+              </div>
+              <ChevronRight size={18} style={{ opacity: 0.5 }} />
+            </button>
+
+            <button 
+              className="premium-settings-item bounce-effect"
+              onClick={() => document.getElementById('json-backup-input')?.click()}
+            >
+              <input 
+                id="json-backup-input" 
+                type="file" 
+                accept=".json" 
+                onChange={handleImportJSON} 
+                style={{ display: 'none' }} 
+              />
+              <div className="premium-settings-item__icon" style={{ color: 'var(--color-primary)' }}>
+                <Upload size={20} />
+              </div>
+              <div className="premium-settings-item__content">
+                <span className="premium-settings-item__label">Restaurar Backup</span>
+                <span className="premium-settings-item__value">Importar copia de seguridad (.json)</span>
               </div>
               <ChevronRight size={18} style={{ opacity: 0.5 }} />
             </button>

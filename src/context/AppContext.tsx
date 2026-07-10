@@ -1,5 +1,11 @@
-import { createContext, useContext, useReducer, useEffect, type ReactNode } from 'react';
+import { createContext, useContext, useReducer, useEffect, useState, type ReactNode } from 'react';
 import type { Transaction, SavingsGoal, FundAllocation, UserSettings } from '../types';
+
+export interface ToastMessage {
+  id: string;
+  message: string;
+  type: 'success' | 'error' | 'info';
+}
 import { auth, db } from '../firebaseConfig';
 import { onAuthStateChanged, signOut as firebaseSignOut } from 'firebase/auth';
 import { doc, setDoc, onSnapshot, collection, query, orderBy, deleteDoc, getDocs } from 'firebase/firestore';
@@ -119,6 +125,15 @@ interface AppContextType {
   signOut: () => Promise<void>;
   displayCurrency: 'ARS' | 'USD';
   exchangeRate: number;
+  toasts: ToastMessage[];
+  showToast: (message: string, type?: 'success' | 'error' | 'info') => void;
+  removeToast: (id: string) => void;
+  importBackupData: (data: {
+    transactions: Transaction[];
+    goals: SavingsGoal[];
+    funds: FundAllocation[];
+    settings: UserSettings;
+  }) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -471,26 +486,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
       userId: state.user?.uid
     });
 
-    // NO actualizamos el estado local antes de guardar en Firebase
-    // Dejamos que el listener de Firebase lo haga para evitar inconsistencias
-    
     if (state.user) {
       try {
         console.log('💾 Guardando en Firebase...');
         await setDoc(doc(db, 'users', state.user.uid, 'transactions', id), newTransaction);
         console.log('✅ Transacción guardada exitosamente en Firebase:', id);
+        showToast(newTransaction.type === 'income' ? 'Ingreso registrado con éxito' : 'Gasto registrado con éxito', 'success');
       } catch (err) {
         console.error("❌ Error guardando en Firebase:", err);
-        console.error("Detalles del error:", JSON.stringify(err, null, 2));
-        // Si falla, mostramos alerta al usuario
-        alert('Error al guardar la transacción. Por favor, verifica tu conexión e intenta nuevamente.');
-        throw err; // Re-lanzamos el error para que se maneje en el componente
+        showToast('Error al registrar el movimiento', 'error');
+        throw err;
       }
     } else {
       // Modo invitado: actualizamos localStorage
       const newTransactions = [newTransaction, ...state.transactions];
       dispatch({ type: 'SET_TRANSACTIONS', payload: newTransactions });
       localStorage.setItem('app_transactions', JSON.stringify(newTransactions));
+      showToast(newTransaction.type === 'income' ? 'Ingreso registrado con éxito (invitado)' : 'Gasto registrado con éxito (invitado)', 'success');
     }
   };
 
@@ -507,9 +519,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         console.log('💾 Guardando actualización en Firebase...');
         await setDoc(doc(db, 'users', state.user.uid, 'transactions', t.id), t, { merge: true });
         console.log('✅ Transacción actualizada exitosamente en Firebase:', t.id);
+        showToast('Movimiento actualizado con éxito', 'success');
       } catch (err) {
         console.error("❌ Error actualizando en Firebase:", err);
-        alert('Error al actualizar la transacción. Por favor, verifica tu conexión e intenta nuevamente.');
+        showToast('Error al actualizar el movimiento', 'error');
         throw err;
       }
     } else {
@@ -517,6 +530,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const newTransactions = state.transactions.map(tr => tr.id === t.id ? t : tr);
       dispatch({ type: 'SET_TRANSACTIONS', payload: newTransactions });
       localStorage.setItem('app_transactions', JSON.stringify(newTransactions));
+      showToast('Movimiento actualizado con éxito (invitado)', 'success');
     }
   };
 
@@ -528,9 +542,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         console.log('💾 Eliminando de Firebase...');
         await deleteDoc(doc(db, 'users', state.user.uid, 'transactions', id));
         console.log('✅ Transacción eliminada exitosamente de Firebase:', id);
+        showToast('Movimiento eliminado con éxito', 'success');
       } catch (err) {
         console.error("❌ Error eliminando de Firebase:", err);
-        alert('Error al eliminar la transacción. Por favor, verifica tu conexión e intenta nuevamente.');
+        showToast('Error al eliminar el movimiento', 'error');
         throw err;
       }
     } else {
@@ -538,6 +553,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const newTransactions = state.transactions.filter(tr => tr.id !== id);
       dispatch({ type: 'SET_TRANSACTIONS', payload: newTransactions });
       localStorage.setItem('app_transactions', JSON.stringify(newTransactions));
+      showToast('Movimiento eliminado con éxito (invitado)', 'success');
     }
   };
 
@@ -545,6 +561,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const newGoals = [...state.goals, g];
     dispatch({ type: 'SET_GOALS', payload: newGoals });
     localStorage.setItem('app_goals', JSON.stringify(newGoals));
+    showToast(`Meta "${g.title}" creada con éxito`, 'success');
 
     if (state.user) {
       try {
@@ -559,6 +576,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const newGoals = state.goals.map(goal => goal.id === g.id ? g : goal);
     dispatch({ type: 'SET_GOALS', payload: newGoals });
     localStorage.setItem('app_goals', JSON.stringify(newGoals));
+    showToast(`Meta "${g.title}" actualizada`, 'success');
 
     if (state.user) {
       try {
@@ -570,9 +588,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const deleteGoal = async (id: string) => {
+    const goalToDelete = state.goals.find(g => g.id === id);
     const newGoals = state.goals.filter(goal => goal.id !== id);
     dispatch({ type: 'SET_GOALS', payload: newGoals });
     localStorage.setItem('app_goals', JSON.stringify(newGoals));
+    showToast(`Meta "${goalToDelete?.title || ''}" eliminada`, 'success');
 
     if (state.user) {
       try {
@@ -744,6 +764,67 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const importBackupData = async (data: {
+    transactions: Transaction[];
+    goals: SavingsGoal[];
+    funds: FundAllocation[];
+    settings: UserSettings;
+  }) => {
+    if (!state.user) {
+      localStorage.setItem('app_transactions', JSON.stringify(data.transactions));
+      localStorage.setItem('app_goals', JSON.stringify(data.goals));
+      localStorage.setItem('app_funds', JSON.stringify(data.funds));
+      localStorage.setItem('app_settings', JSON.stringify(data.settings));
+      
+      dispatch({ type: 'SET_TRANSACTIONS', payload: data.transactions });
+      dispatch({ type: 'SET_GOALS', payload: data.goals });
+      dispatch({ type: 'SET_FUNDS', payload: data.funds });
+      dispatch({ type: 'SET_SETTINGS', payload: data.settings });
+      
+      showToast('Copia de seguridad restaurada con éxito (invitado)', 'success');
+      return;
+    }
+
+    try {
+      const userId = state.user.uid;
+      const [transactionsSnap, goalsSnap, fundsSnap] = await Promise.all([
+        getDocs(collection(db, 'users', userId, 'transactions')),
+        getDocs(collection(db, 'users', userId, 'goals')),
+        getDocs(collection(db, 'users', userId, 'funds'))
+      ]);
+
+      const deletePromises: Promise<void>[] = [];
+      transactionsSnap.forEach(doc => deletePromises.push(deleteDoc(doc.ref)));
+      goalsSnap.forEach(doc => deletePromises.push(deleteDoc(doc.ref)));
+      fundsSnap.forEach(doc => deletePromises.push(deleteDoc(doc.ref)));
+      await Promise.all(deletePromises);
+
+      const uploadPromises: Promise<void>[] = [];
+      data.transactions.forEach(t => {
+        uploadPromises.push(setDoc(doc(db, 'users', userId, 'transactions', t.id), t));
+      });
+      data.goals.forEach(g => {
+        uploadPromises.push(setDoc(doc(db, 'users', userId, 'goals', g.id), g));
+      });
+      data.funds.forEach(f => {
+        uploadPromises.push(setDoc(doc(db, 'users', userId, 'funds', f.id), f));
+      });
+      uploadPromises.push(setDoc(doc(db, 'users', userId), { settings: data.settings }, { merge: true }));
+      await Promise.all(uploadPromises);
+
+      localStorage.setItem('app_transactions', JSON.stringify(data.transactions));
+      localStorage.setItem('app_goals', JSON.stringify(data.goals));
+      localStorage.setItem('app_funds', JSON.stringify(data.funds));
+      localStorage.setItem('app_settings', JSON.stringify(data.settings));
+
+      showToast('Copia de seguridad restaurada con éxito', 'success');
+    } catch (err) {
+      console.error('Error importing backup data:', err);
+      showToast('Error al importar la copia de seguridad', 'error');
+      throw err;
+    }
+  };
+
   const handleSignOut = async () => {
     await firebaseSignOut(auth);
     
@@ -824,6 +905,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const monthlyExpenses = monthlyTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + getTransactionAmountInDisplay(t), 0);
   const monthlyBalance = monthlyIncome - monthlyExpenses;
 
+  const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+    const id = Math.random().toString(36).substring(2, 9);
+    setToasts(prev => [...prev, { id, message, type }]);
+  };
+  const removeToast = (id: string) => {
+    setToasts(prev => prev.filter(t => t.id !== id));
+  };
+
   return (
     <AppContext.Provider value={{ 
       state, 
@@ -851,7 +941,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       toggleTheme,
       signOut: handleSignOut,
       displayCurrency,
-      exchangeRate
+      exchangeRate,
+      toasts,
+      showToast,
+      removeToast,
+      importBackupData
     }}>
       {children}
     </AppContext.Provider>

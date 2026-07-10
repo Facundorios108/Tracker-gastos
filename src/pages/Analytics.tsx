@@ -52,6 +52,39 @@ export default function Analytics({ onBack }: AnalyticsProps) {
       .reduce((sum, t) => sum + convertToDisplay(t.amount, t.currency), 0);
   }, [monthlyTransactions, convertToDisplay]);
 
+  // Obtener mes anterior para comparación MoM
+  const prevMonthString = useMemo(() => {
+    const [year, month] = filterMonth.split('-').map(Number);
+    const prevDate = new Date(year, month - 2, 1);
+    return `${prevDate.getFullYear()}-${(prevDate.getMonth() + 1).toString().padStart(2, '0')}`;
+  }, [filterMonth]);
+
+  const prevMonthlyTransactions = useMemo(() => {
+    return state.transactions.filter(t => t.date.startsWith(prevMonthString));
+  }, [state.transactions, prevMonthString]);
+
+  const prevTotalExpenses = useMemo(() => {
+    return prevMonthlyTransactions
+      .filter(t => t.type === 'expense')
+      .reduce((sum, t) => sum + convertToDisplay(t.amount, t.currency), 0);
+  }, [prevMonthlyTransactions, convertToDisplay]);
+
+  const prevTotalIncome = useMemo(() => {
+    return prevMonthlyTransactions
+      .filter(t => t.type === 'income')
+      .reduce((sum, t) => sum + convertToDisplay(t.amount, t.currency), 0);
+  }, [prevMonthlyTransactions, convertToDisplay]);
+
+  const expensesMoM = useMemo(() => {
+    if (prevTotalExpenses === 0) return null;
+    return ((totalExpenses - prevTotalExpenses) / prevTotalExpenses) * 100;
+  }, [totalExpenses, prevTotalExpenses]);
+
+  const incomeMoM = useMemo(() => {
+    if (prevTotalIncome === 0) return null;
+    return ((totalIncome - prevTotalIncome) / prevTotalIncome) * 100;
+  }, [totalIncome, prevTotalIncome]);
+
   // Datos para Doughnut (Gastos por Categoría)
   const categoryData = useMemo(() => {
     const expenses = monthlyTransactions.filter(t => t.type === 'expense');
@@ -158,6 +191,17 @@ export default function Analytics({ onBack }: AnalyticsProps) {
     }
   };
 
+  const formatPercentage = (val: number) => {
+    const absVal = Math.abs(val);
+    if (absVal >= 100000) {
+      return `${(val / 1000).toFixed(0)}k%`;
+    }
+    if (absVal >= 1000) {
+      return `${(val / 1000).toFixed(1)}k%`;
+    }
+    return `${val >= 0 ? '+' : ''}${val.toFixed(1)}%`;
+  };
+
   return (
     <div className="analytics-page safe-area-bottom">
       <header className="analytics-page__header animate-slide-up">
@@ -186,18 +230,34 @@ export default function Analytics({ onBack }: AnalyticsProps) {
             <div className="analytics-summary__icon" style={{ backgroundColor: 'rgba(74, 222, 128, 0.15)', color: '#4ade80' }}>
               <TrendingUp size={20} />
             </div>
-            <div>
+            <div className="analytics-summary__details">
               <p>Ingresos</p>
               <h4>{formatCurrency(totalIncome)}</h4>
+              {incomeMoM !== null && (
+                <div className="mom-badge-container">
+                  <span className={`mom-badge mom-badge--${incomeMoM >= 0 ? 'up' : 'down'}`}>
+                    {incomeMoM >= 0 ? '▲' : '▼'} {formatPercentage(incomeMoM)}
+                  </span>
+                  <span className="mom-badge-text">vs mes ant.</span>
+                </div>
+              )}
             </div>
           </div>
           <div className="analytics-summary__card">
             <div className="analytics-summary__icon" style={{ backgroundColor: 'rgba(248, 113, 113, 0.15)', color: '#f87171' }}>
               <TrendingDown size={20} />
             </div>
-            <div>
+            <div className="analytics-summary__details">
               <p>Gastos</p>
               <h4>{formatCurrency(totalExpenses)}</h4>
+              {expensesMoM !== null && (
+                <div className="mom-badge-container">
+                  <span className={`mom-badge mom-badge--${expensesMoM <= 0 ? 'down-good' : 'up-bad'}`}>
+                    {expensesMoM >= 0 ? '▲' : '▼'} {formatPercentage(expensesMoM)}
+                  </span>
+                  <span className="mom-badge-text">vs mes ant.</span>
+                </div>
+              )}
             </div>
           </div>
         </div>

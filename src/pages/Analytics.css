@@ -11,6 +11,7 @@
   align-items: center;
   gap: 16px;
   padding: 20px;
+  padding-top: calc(env(safe-area-inset-top, 20px) + 16px);
   background: var(--color-background);
   position: sticky;
   top: 0;
@@ -189,4 +190,50 @@
 .category-progress-fill {
   height: 100%;
   border-radius: 4px;
+}
+
+.analytics-summary__details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.mom-badge-container {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.mom-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 6px;
+  border-radius: 6px;
+  width: fit-content;
+  line-height: 1;
+}
+
+.mom-badge-text {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  opacity: 0.8;
+  font-weight: 500;
+}
+
+.mom-badge--up,
+.mom-badge--down-good {
+  background-color: rgba(16, 185, 129, 0.12);
+  color: #10b981;
+}
+
+.mom-badge--down,
+.mom-badge--up-bad {
+  background-color: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
 }
