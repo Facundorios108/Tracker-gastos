@@ -8,6 +8,7 @@ export interface CreditCard {
   dueDate: number; // day of the month (1-31)
   last4: string; // últimos 4 dígitos
   color?: string; // color personalizado para distinguirlas
+  paidMonths?: string[]; // Array de strings "YYYY-MM" para trackear qué meses se pagaron
 }
 
 export const CARD_BRANDS: { id: CardBrand; label: string; color: string }[] = [
@@ -25,13 +26,13 @@ export interface Transaction {
   description: string;
   date: string; // ISO string
   type: 'income' | 'expense';
-  currency: 'ARS' | 'USD';
+  currency: 'ARS' | 'USD' | 'EUR';
   
   // Novedades para Medio de Pago
   paymentMethod?: 'credit' | 'debit' | 'cash' | 'transfer';
   creditCardId?: string;
   billingMonth?: string; // Formato YYYY-MM
-  originalCurrency?: 'ARS' | 'USD';
+  originalCurrency?: 'ARS' | 'USD' | 'EUR';
   originalAmount?: number;
   exchangeRate?: number;
   
@@ -56,7 +57,7 @@ export interface SavingsGoal {
   currentAmount: number;
   emoji: string;
   color: string;
-  currency: 'ARS' | 'USD';
+  currency: 'ARS' | 'USD' | 'EUR';
   deadline?: string; // ISO date string "YYYY-MM-DD"
 }
 
@@ -73,7 +74,7 @@ export interface FundAllocation {
   amount: number;
   emoji: string;
   color: string;
-  currency: 'ARS' | 'USD';
+  currency: 'ARS' | 'USD' | 'EUR';
   deposits?: FundDeposit[];
 }
 
@@ -81,8 +82,9 @@ export interface UserSettings {
   name: string;
   monthlyBudget: number;
   theme: 'light' | 'dark';
-  displayCurrency: 'ARS' | 'USD';
+  displayCurrency: 'ARS' | 'USD' | 'EUR';
   exchangeRate: number; // ARS per USD
+  exchangeRateEUR: number; // ARS per EUR
   creditCards?: CreditCard[]; // Añadido para guardar tarjetas
   customization?: {
     primaryColor: string;
@@ -109,6 +111,7 @@ export const CATEGORIES: CategoryConfig[] = [
   { id: 'education', label: 'Educación', emoji: '📚', color: '#48dbfb', type: 'expense' },
   { id: 'dining', label: 'Restaurantes', emoji: '🍽️', color: '#e17055', type: 'expense' },
   { id: 'subscriptions', label: 'Suscripciones', emoji: '📱', color: '#6c5ce7', type: 'expense' },
+  { id: 'card-payment', label: 'Pago de tarjeta', emoji: '💳', color: '#6366f1', type: 'expense' },
   { id: 'other-expense', label: 'Otros', emoji: '📦', color: '#a29bfe', type: 'expense' },
   { id: 'salary', label: 'Sueldo', emoji: '💰', color: '#1b6b4f', type: 'income' },
   { id: 'freelance', label: 'Freelance', emoji: '💻', color: '#00b894', type: 'income' },

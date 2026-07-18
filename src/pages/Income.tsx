@@ -255,7 +255,7 @@ export default function Income({ onEdit, initialFilters }: IncomeProps) {
                       <div className="income-item__amount">
                         +{appFormatCurrency(t.amount, t.currency)}
                       </div>
-                      {t.currency === 'USD' && <span className="currency-badge-glass">USD</span>}
+                      {t.currency !== 'ARS' && <span className="currency-badge-glass">{t.currency}</span>}
                     </div>
                     <div className="income-item__actions">
                       <button

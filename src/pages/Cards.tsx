@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { CreditCard as CreditCardIcon, ChevronLeft } from 'lucide-react';
+import { CreditCard as CreditCardIcon, ChevronLeft, CheckCircle, AlertCircle } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { getCategoryConfig } from '../types';
 import { formatDate } from '../utils';
@@ -39,7 +39,7 @@ function formatStatementKey(key: string) {
 }
 
 export default function Cards({ onEdit, onAddExpense }: CardsProps) {
-  const { state, formatCurrency } = useApp();
+  const { state, formatCurrency, toggleCardPayment } = useApp();
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const [selectedStatementKey, setSelectedStatementKey] = useState<string | null>(null);
 
@@ -86,6 +86,16 @@ export default function Cards({ onEdit, onAddExpense }: CardsProps) {
       };
     });
   }, [state.settings.creditCards, state.transactions]);
+
+  const consolidatedTotals = useMemo(() => {
+    let totalARS = 0;
+    let totalUSD = 0;
+    cardsWithStats.forEach(c => {
+      totalARS += c.totalARS;
+      totalUSD += c.totalUSD;
+    });
+    return { totalARS, totalUSD };
+  }, [cardsWithStats]);
 
   const selectedCard = cardsWithStats.find(c => c.id === selectedCardId);
   const activeStatementKey = selectedStatementKey || selectedCard?.currentStatementKey;
@@ -178,6 +188,49 @@ export default function Cards({ onEdit, onAddExpense }: CardsProps) {
           </div>
         </div>
 
+        {activeStatementKey && (
+          <div style={{ marginBottom: '20px' }}>
+            {(() => {
+              const isPaid = selectedCard.paidMonths?.includes(activeStatementKey) || false;
+              const hasNoConsumption = statementTotalARS === 0 && statementTotalUSD === 0;
+              const isDisabled = !isPaid && hasNoConsumption;
+              return (
+                <button
+                  className={`card-payment-btn bounce-effect ${isPaid ? 'paid' : 'unpaid'}`}
+                  onClick={() => toggleCardPayment(selectedCard.id, activeStatementKey, { ars: statementTotalARS, usd: statementTotalUSD })}
+                  disabled={isDisabled}
+                  style={{
+                    width: '100%',
+                    padding: '16px',
+                    borderRadius: '16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '10px',
+                    fontWeight: 700,
+                    fontSize: '15px',
+                    border: isDisabled
+                      ? '2px dashed var(--color-glass-border)'
+                      : isPaid ? '2px solid #4ade80' : '2px solid #fbbf24',
+                    background: isDisabled
+                      ? 'transparent'
+                      : isPaid ? 'rgba(74, 222, 128, 0.1)' : 'rgba(251, 191, 36, 0.1)',
+                    color: isDisabled
+                      ? 'var(--color-text-secondary)'
+                      : isPaid ? '#4ade80' : '#fbbf24',
+                    cursor: isDisabled ? 'not-allowed' : 'pointer',
+                    opacity: isDisabled ? 0.4 : 1,
+                    transition: 'all 0.3s ease'
+                  }}
+                >
+                  {isPaid ? <CheckCircle size={20} /> : <AlertCircle size={20} />}
+                  <span>{isPaid ? '✓ Resumen Pagado' : isDisabled ? 'Sin Consumos para Pagar' : 'Marcar como Pagado'}</span>
+                </button>
+              );
+            })()}
+          </div>
+        )}
+
         <div className="cards-transaction-list">
           <div className="expense-group__items" style={{ marginBottom: '24px' }}>
             {statementTransactions.length === 0 ? (
@@ -248,7 +301,35 @@ export default function Cards({ onEdit, onAddExpense }: CardsProps) {
           </span>
         </div>
       ) : (
-        <div className="cards-grid">
+        <>
+          {/* Consolidated cards summary */}
+          <div className="consolidated-cards-summary animate-scale-in" style={{
+            background: 'var(--color-glass)',
+            border: '1px solid var(--color-glass-border)',
+            borderRadius: '20px',
+            padding: '16px 20px',
+            marginBottom: '20px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center'
+          }}>
+            <div>
+              <span style={{ fontSize: '13px', color: 'var(--color-text-secondary)', fontWeight: 600 }}>Total Consolidado Tarjetas (Resumen Actual)</span>
+              <div style={{ display: 'flex', gap: '16px', marginTop: '6px' }}>
+                <span style={{ fontSize: '20px', fontWeight: 800, color: 'var(--color-on-surface)' }}>
+                  {new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(consolidatedTotals.totalARS)}
+                </span>
+                {consolidatedTotals.totalUSD > 0 && (
+                  <span style={{ fontSize: '20px', fontWeight: 800, color: '#6366f1' }}>
+                    {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(consolidatedTotals.totalUSD)}
+                  </span>
+                )}
+              </div>
+            </div>
+            <CreditCardIcon size={28} style={{ opacity: 0.6, color: 'var(--color-primary)' }} />
+          </div>
+
+          <div className="cards-grid">
           {cardsWithStats.map((card, idx) => {
             const brand = getBrandInfo(card.brand);
             return (
@@ -277,10 +358,34 @@ export default function Cards({ onEdit, onAddExpense }: CardsProps) {
                     </div>
                   )}
                 </div>
+
+                {(() => {
+                  const isPaid = card.paidMonths?.includes(card.currentStatementKey) || false;
+                  const hasConsumption = card.totalARS > 0 || card.totalUSD > 0;
+                  if (!hasConsumption && !isPaid) return null;
+                  return (
+                    <div style={{
+                      padding: '12px 16px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      fontSize: '14px',
+                      fontWeight: 600,
+                      color: isPaid ? '#4ade80' : '#fbbf24',
+                      borderTop: '1px solid var(--color-glass-border)',
+                      marginTop: '8px',
+                      background: 'rgba(255,255,255,0.01)'
+                    }}>
+                      {isPaid ? <CheckCircle size={16} /> : <AlertCircle size={16} />}
+                      <span>{isPaid ? 'Resumen Pagado' : 'Pendiente de Pago'}</span>
+                    </div>
+                  );
+                })()}
               </div>
             );
           })}
         </div>
+        </>
       )}
     </div>
   );

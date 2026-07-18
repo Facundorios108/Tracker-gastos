@@ -42,7 +42,7 @@ export default function Analytics({ onBack }: AnalyticsProps) {
   // Calcular totales
   const totalExpenses = useMemo(() => {
     return monthlyTransactions
-      .filter(t => t.type === 'expense')
+      .filter(t => t.type === 'expense' && !(t.paymentMethod === 'credit' && t.creditCardId))
       .reduce((sum, t) => sum + convertToDisplay(t.amount, t.currency), 0);
   }, [monthlyTransactions, convertToDisplay]);
 
@@ -65,7 +65,7 @@ export default function Analytics({ onBack }: AnalyticsProps) {
 
   const prevTotalExpenses = useMemo(() => {
     return prevMonthlyTransactions
-      .filter(t => t.type === 'expense')
+      .filter(t => t.type === 'expense' && !(t.paymentMethod === 'credit' && t.creditCardId))
       .reduce((sum, t) => sum + convertToDisplay(t.amount, t.currency), 0);
   }, [prevMonthlyTransactions, convertToDisplay]);
 
@@ -87,7 +87,7 @@ export default function Analytics({ onBack }: AnalyticsProps) {
 
   // Datos para Doughnut (Gastos por Categoría)
   const categoryData = useMemo(() => {
-    const expenses = monthlyTransactions.filter(t => t.type === 'expense');
+    const expenses = monthlyTransactions.filter(t => t.type === 'expense' && !(t.paymentMethod === 'credit' && t.creditCardId));
     const grouped: Record<string, number> = {};
     expenses.forEach(t => {
       const amount = convertToDisplay(t.amount, t.currency);
@@ -136,7 +136,7 @@ export default function Analytics({ onBack }: AnalyticsProps) {
   };
 
   const dailyData = useMemo(() => {
-    const expenses = monthlyTransactions.filter(t => t.type === 'expense');
+    const expenses = monthlyTransactions.filter(t => t.type === 'expense' && !(t.paymentMethod === 'credit' && t.creditCardId));
     
     // Determine the number of days in the month
     const [year, month] = filterMonth.split('-');

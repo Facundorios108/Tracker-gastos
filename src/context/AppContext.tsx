@@ -27,6 +27,7 @@ const defaultSettings: UserSettings = {
   theme: 'light',
   displayCurrency: 'ARS',
   exchangeRate: 1100,
+  exchangeRateEUR: 1200,
   customization: {
     primaryColor: '#10b981',
     backgroundColor: '#f8fafc',
@@ -113,8 +114,8 @@ interface AppContextType {
   deleteFund: (id: string) => Promise<void>;
   updateSettings: (settings: Partial<UserSettings>) => Promise<void>;
   clearAllData: () => Promise<void>;
-  convertToDisplay: (amount: number, from: 'ARS' | 'USD') => number;
-  formatCurrency: (amount: number, currency?: 'ARS' | 'USD') => string;
+  convertToDisplay: (amount: number, from: 'ARS' | 'USD' | 'EUR') => number;
+  formatCurrency: (amount: number, currency?: 'ARS' | 'USD' | 'EUR') => string;
   totalIncome: number;
   totalExpenses: number;
   balance: number;
@@ -123,8 +124,9 @@ interface AppContextType {
   monthlyBalance: number;
   toggleTheme: () => void;
   signOut: () => Promise<void>;
-  displayCurrency: 'ARS' | 'USD';
+  displayCurrency: 'ARS' | 'USD' | 'EUR';
   exchangeRate: number;
+  toggleCardPayment: (cardId: string, month: string, totals?: { ars: number, usd: number }) => Promise<void>;
   toasts: ToastMessage[];
   showToast: (message: string, type?: 'success' | 'error' | 'info') => void;
   removeToast: (id: string) => void;
@@ -141,12 +143,21 @@ const AppContext = createContext<AppContextType | null>(null);
 export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, defaultState);
 
+  const [authResolved, setAuthResolved] = useState(false);
+  const [listenersFired, setListenersFired] = useState({
+    settings: false,
+    transactions: false,
+    goals: false,
+    funds: false,
+  });
+
   // Auth Listener
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       dispatch({ type: 'SET_USER', payload: user });
-      dispatch({ type: 'SET_LOADING', payload: false });
+      setAuthResolved(true);
       if (!user) {
+        dispatch({ type: 'SET_LOADING', payload: false });
         localStorage.setItem('app_user_uid', 'guest');
       }
     });
@@ -154,6 +165,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    if (!authResolved) return;
+    if (!state.user) {
+      dispatch({ type: 'SET_LOADING', payload: false });
+    } else {
+      if (listenersFired.settings && listenersFired.transactions && listenersFired.goals && listenersFired.funds) {
+        dispatch({ type: 'SET_LOADING', payload: false });
+      } else {
+        dispatch({ type: 'SET_LOADING', payload: true });
+      }
+    }
+  }, [authResolved, state.user, listenersFired]);
+
+  useEffect(() => {
+    setListenersFired({
+      settings: false,
+      transactions: false,
+      goals: false,
+      funds: false,
+    });
     if (!state.user) return;
 
     let active = true;
@@ -230,8 +260,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
           // Init default settings in Firestore if new user
           setDoc(settingsRef, { settings: defaultSettings }, { merge: true });
         }
+        setListenersFired(prev => ({ ...prev, settings: true }));
       }, (error) => {
         console.error("Settings listener error:", error);
+        setListenersFired(prev => ({ ...prev, settings: true }));
       });
       unsubs.push(unsubSettings);
 
@@ -249,10 +281,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         });
         localStorage.setItem('app_transactions', JSON.stringify(transactions));
         dispatch({ type: 'SET_TRANSACTIONS', payload: transactions });
+        setListenersFired(prev => ({ ...prev, transactions: true }));
       }, (error) => {
         console.error("❌ Error en listener de transacciones:", error);
-        console.error("Código de error:", error.code);
-        console.error("Mensaje:", error.message);
+        setListenersFired(prev => ({ ...prev, transactions: true }));
       });
       unsubs.push(unsubTransactions);
 
@@ -261,8 +293,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const goals = querySnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as SavingsGoal));
         localStorage.setItem('app_goals', JSON.stringify(goals));
         dispatch({ type: 'SET_GOALS', payload: goals });
+        setListenersFired(prev => ({ ...prev, goals: true }));
       }, (error) => {
         console.error("Goals listener error:", error);
+        setListenersFired(prev => ({ ...prev, goals: true }));
       });
       unsubs.push(unsubGoals);
 
@@ -271,8 +305,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const funds = querySnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as FundAllocation));
         localStorage.setItem('app_funds', JSON.stringify(funds));
         dispatch({ type: 'SET_FUNDS', payload: funds });
+        setListenersFired(prev => ({ ...prev, funds: true }));
       }, (error) => {
         console.error("Funds listener error:", error);
+        setListenersFired(prev => ({ ...prev, funds: true }));
       });
       unsubs.push(unsubFunds);
     };
@@ -325,10 +361,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // TODO: Sistema de auto-generación deshabilitado - las transacciones se crean manualmente
   // Procesar suscripciones y cuotas pendientes automáticamente
   useEffect(() => {
-    // DESHABILITADO: No crear transacciones automáticamente
-    return;
-    
-    if (!state.user || state.transactions.length === 0) return;
+    if (state.transactions.length === 0) return;
     
     const processRecurringTransactions = async () => {
       const today = new Date();
@@ -385,6 +418,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
             }
             if (sub.notes) {
               newTransaction.notes = sub.notes;
+            }
+            if (sub.creditCardId) {
+              newTransaction.creditCardId = sub.creditCardId;
+              const card = state.settings.creditCards?.find(c => c.id === sub.creditCardId);
+              if (card) {
+                let bYear = newDate.getFullYear();
+                let bMonth = newDate.getMonth() + 1;
+                if (newDate.getDate() > card.closingDate) {
+                  bMonth += 1;
+                  if (bMonth > 12) {
+                    bMonth = 1;
+                    bYear += 1;
+                  }
+                }
+                newTransaction.billingMonth = `${bYear}-${String(bMonth).padStart(2, '0')}`;
+              }
             }
             
             await addTransaction(newTransaction);
@@ -453,6 +502,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
             }
             if (inst.notes) {
               newTransaction.notes = inst.notes;
+            }
+            if (inst.creditCardId) {
+              newTransaction.creditCardId = inst.creditCardId;
+              const card = state.settings.creditCards?.find(c => c.id === inst.creditCardId);
+              if (card) {
+                let bYear = newDate.getFullYear();
+                let bMonth = newDate.getMonth() + 1;
+                if (newDate.getDate() > card.closingDate) {
+                  bMonth += 1;
+                  if (bMonth > 12) {
+                    bMonth = 1;
+                    bYear += 1;
+                  }
+                }
+                newTransaction.billingMonth = `${bYear}-${String(bMonth).padStart(2, '0')}`;
+              }
             }
             
             await addTransaction(newTransaction);
@@ -844,41 +909,124 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!state.user) return;
-    const fetchRate = async () => {
+    const fetchRates = async () => {
       try {
-        const response = await fetch('https://dolarapi.com/v1/dolares/oficial');
-        const data = await response.json();
-        if (data && data.venta) {
-          updateSettings({ exchangeRate: data.venta });
-        }
+        const [usdRes, eurRes] = await Promise.all([
+          fetch('https://dolarapi.com/v1/dolares/oficial'),
+          fetch('https://dolarapi.com/v1/cotizaciones/eur')
+        ]);
+        const usdData = await usdRes.json();
+        const eurData = await eurRes.json();
+        const updates: any = {};
+        if (usdData && usdData.venta) updates.exchangeRate = usdData.venta;
+        if (eurData && eurData.venta) updates.exchangeRateEUR = eurData.venta;
+        if (Object.keys(updates).length > 0) updateSettings(updates);
       } catch (error) {
-        console.error('Error fetching exchange rate:', error);
+        console.error('Error fetching exchange rates:', error);
       }
     };
-    fetchRate();
+    fetchRates();
   }, [state.user?.uid]);
 
-  const { displayCurrency, exchangeRate } = state.settings;
+  const { displayCurrency, exchangeRate, exchangeRateEUR } = state.settings;
 
   const toggleTheme = () => {
     const nextTheme = state.settings.theme === 'light' ? 'dark' : 'light';
     updateSettings({ theme: nextTheme });
   };
 
-  const convertToDisplay = (amount: number, from: 'ARS' | 'USD') => {
+  const convertToDisplay = (amount: number, from: 'ARS' | 'USD' | 'EUR') => {
     if (from === displayCurrency) return amount;
-    if (from === 'ARS' && displayCurrency === 'USD') return amount / exchangeRate;
-    if (from === 'USD' && displayCurrency === 'ARS') return amount * exchangeRate;
+    // Convert to ARS base first
+    let amountInARS = amount;
+    if (from === 'USD') amountInARS = amount * exchangeRate;
+    if (from === 'EUR') amountInARS = amount * (exchangeRateEUR || 1200);
+    // Convert from ARS to target displayCurrency
+    if (displayCurrency === 'ARS') return amountInARS;
+    if (displayCurrency === 'USD') return amountInARS / exchangeRate;
+    if (displayCurrency === 'EUR') return amountInARS / (exchangeRateEUR || 1200);
     return amount;
   };
 
-  const formatCurrency = (amount: number, currency?: 'ARS' | 'USD') => {
+  const formatCurrency = (amount: number, currency?: 'ARS' | 'USD' | 'EUR') => {
     const targetCurrency = currency || displayCurrency;
+    if (targetCurrency === 'EUR') {
+      return new Intl.NumberFormat('de-DE', {
+        style: 'currency',
+        currency: 'EUR',
+        minimumFractionDigits: 2,
+      }).format(amount);
+    }
     return new Intl.NumberFormat('es-AR', {
       style: 'currency',
       currency: targetCurrency,
       minimumFractionDigits: targetCurrency === 'USD' ? 2 : 0,
     }).format(amount);
+  };
+
+  const toggleCardPayment = async (cardId: string, month: string, totals?: { ars: number, usd: number }) => {
+    const cards = state.settings.creditCards || [];
+    const card = cards.find(c => c.id === cardId);
+    if (!card) return;
+
+    const paidMonths = card.paidMonths || [];
+    const isPaid = paidMonths.includes(month);
+    const nextPaidMonths = isPaid
+      ? paidMonths.filter(m => m !== month)
+      : [...paidMonths, month];
+
+    const updatedCards = cards.map(c => {
+      if (c.id === cardId) {
+        return { ...c, paidMonths: nextPaidMonths };
+      }
+      return c;
+    });
+
+    await updateSettings({ creditCards: updatedCards });
+
+    const matchNote = `Pago automático tarjeta ${cardId} resumen ${month}`;
+
+    if (isPaid) {
+      const toDelete = state.transactions.filter(t => t.notes === matchNote);
+      for (const t of toDelete) {
+        await deleteTransaction(t.id);
+      }
+    } else if (totals) {
+      const brandNames = {
+        visa: 'Visa',
+        mastercard: 'Mastercard',
+        amex: 'American Express',
+        naranja: 'Naranja',
+        otra: 'Otra',
+        otro: 'Otra'
+      };
+      const brandLabel = brandNames[card.brand as keyof typeof brandNames] || 'Tarjeta';
+
+      if (totals.ars > 0) {
+        await addTransaction({
+          amount: Math.round(totals.ars),
+          category: 'card-payment',
+          description: `Pago tarjeta ${brandLabel} - ${card.bank}`,
+          date: new Date().toISOString(),
+          type: 'expense',
+          currency: 'ARS',
+          paymentMethod: 'credit',
+          notes: matchNote
+        });
+      }
+      if (totals.usd > 0) {
+        await addTransaction({
+          amount: Math.round(totals.usd * 100) / 100,
+          category: 'card-payment',
+          description: `Pago tarjeta ${brandLabel} - ${card.bank} (USD)`,
+          date: new Date().toISOString(),
+          type: 'expense',
+          currency: 'USD',
+          paymentMethod: 'credit',
+          notes: matchNote
+        });
+      }
+    }
   };
 
   const now = new Date();
@@ -898,11 +1046,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const getTransactionAmountInDisplay = (t: Transaction) => convertToDisplay(t.amount, t.currency);
 
   const totalIncome = state.transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + getTransactionAmountInDisplay(t), 0);
-  const totalExpenses = state.transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + getTransactionAmountInDisplay(t), 0);
+  const totalExpenses = state.transactions.filter(t => t.type === 'expense' && !(t.paymentMethod === 'credit' && t.creditCardId)).reduce((sum, t) => sum + getTransactionAmountInDisplay(t), 0);
   const balance = totalIncome - totalExpenses;
 
   const monthlyIncome = monthlyTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + getTransactionAmountInDisplay(t), 0);
-  const monthlyExpenses = monthlyTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + getTransactionAmountInDisplay(t), 0);
+  const monthlyExpenses = monthlyTransactions.filter(t => t.type === 'expense' && !(t.paymentMethod === 'credit' && t.creditCardId)).reduce((sum, t) => sum + getTransactionAmountInDisplay(t), 0);
   const monthlyBalance = monthlyIncome - monthlyExpenses;
 
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
@@ -942,6 +1090,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       signOut: handleSignOut,
       displayCurrency,
       exchangeRate,
+      toggleCardPayment,
       toasts,
       showToast,
       removeToast,

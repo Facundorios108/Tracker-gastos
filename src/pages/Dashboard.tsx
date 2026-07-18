@@ -15,6 +15,8 @@ export default function Dashboard({ onNavigate, onEdit }: DashboardProps) {
 
   const displayBudget = state.settings.displayCurrency === 'USD'
     ? (state.settings.monthlyBudget / state.settings.exchangeRate)
+    : state.settings.displayCurrency === 'EUR'
+    ? (state.settings.monthlyBudget / (state.settings.exchangeRateEUR || 1200))
     : state.settings.monthlyBudget;
 
   const [isEditingBudget, setIsEditingBudget] = useState(false);
@@ -50,6 +52,8 @@ export default function Dashboard({ onNavigate, onEdit }: DashboardProps) {
     if (!isNaN(val) && val >= 0) {
       const budgetInBase = state.settings.displayCurrency === 'USD'
         ? val * state.settings.exchangeRate
+        : state.settings.displayCurrency === 'EUR'
+        ? val * (state.settings.exchangeRateEUR || 1200)
         : val;
       updateSettings({ monthlyBudget: budgetInBase });
       setIsEditingBudget(false);
@@ -85,7 +89,7 @@ export default function Dashboard({ onNavigate, onEdit }: DashboardProps) {
             </div>
             <div className="modal-content">
               <div className="budget-input-container">
-                <span className="budget-currency-symbol">{state.settings.displayCurrency === 'ARS' ? '$' : 'u$s'}</span>
+                <span className="budget-currency-symbol">{state.settings.displayCurrency === 'EUR' ? '€' : state.settings.displayCurrency === 'USD' ? 'u$s' : '$'}</span>
                 <input 
                   type="text" 
                   inputMode="numeric"
@@ -215,7 +219,7 @@ export default function Dashboard({ onNavigate, onEdit }: DashboardProps) {
                     <div className={`transaction-amount-premium ${t.type}`}>
                       {t.type === 'income' ? '+' : '-'}{formatCurrency(t.amount, t.currency)}
                     </div>
-                    {t.currency === 'USD' && <span className="currency-tag">USD</span>}
+                    {t.currency !== 'ARS' && <span className="currency-tag">{t.currency}</span>}
                   </div>
                 </div>
               );

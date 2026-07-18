@@ -1,60 +1,61 @@
-import './SkeletonLoader.css';
-
 export default function SkeletonLoader() {
   return (
-    <div className="skeleton-wrapper">
-      {/* ── Header ── */}
-      <header className="skeleton-header">
-        <div className="skeleton-circle" style={{ width: '48px', height: '48px', borderRadius: '14px' }}></div>
-        <div className="skeleton-text-group">
-          <div className="skeleton-line" style={{ width: '80px', height: '14px' }}></div>
-          <div className="skeleton-line" style={{ width: '120px', height: '18px', marginTop: '6px' }}></div>
-        </div>
-      </header>
-
-      {/* ── Balance Card ── */}
-      <div className="skeleton-card">
-        <div className="skeleton-line" style={{ width: '150px', height: '36px', marginBottom: '24px' }}></div>
-        <div className="skeleton-card-row">
-          <div className="skeleton-card-item">
-            <div className="skeleton-circle" style={{ width: '32px', height: '32px' }}></div>
-            <div className="skeleton-text-group">
-              <div className="skeleton-line" style={{ width: '60px', height: '12px' }}></div>
-              <div className="skeleton-line" style={{ width: '80px', height: '16px', marginTop: '4px' }}></div>
-            </div>
-          </div>
-          <div className="skeleton-card-item">
-            <div className="skeleton-circle" style={{ width: '32px', height: '32px' }}></div>
-            <div className="skeleton-text-group">
-              <div className="skeleton-line" style={{ width: '60px', height: '12px' }}></div>
-              <div className="skeleton-line" style={{ width: '80px', height: '16px', marginTop: '4px' }}></div>
-            </div>
-          </div>
-        </div>
-        <div className="skeleton-line" style={{ width: '100%', height: '8px', borderRadius: '4px', marginTop: '24px' }}></div>
-      </div>
-
-      {/* ── Navigation Tabs ── */}
-      <div className="skeleton-tabs">
-        <div className="skeleton-tab"></div>
-        <div className="skeleton-tab"></div>
-        <div className="skeleton-tab"></div>
-      </div>
-
-      {/* ── Transaction List ── */}
-      <div className="skeleton-list">
-        <div className="skeleton-line" style={{ width: '100px', height: '16px', marginBottom: '16px' }}></div>
-        {Array.from({ length: 4 }).map((_, idx) => (
-          <div key={idx} className="skeleton-list-item">
-            <div className="skeleton-circle" style={{ width: '40px', height: '40px' }}></div>
-            <div className="skeleton-text-group" style={{ flex: 1 }}>
-              <div className="skeleton-line" style={{ width: '40%', height: '14px' }}></div>
-              <div className="skeleton-line" style={{ width: '25%', height: '11px', marginTop: '6px' }}></div>
-            </div>
-            <div className="skeleton-line" style={{ width: '60px', height: '16px' }}></div>
-          </div>
-        ))}
-      </div>
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      height: '100vh',
+      width: '100vw',
+      background: 'linear-gradient(135deg, #1B6B4F 0%, #0d3a2b 100%)',
+      color: '#F4F5F0',
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      zIndex: 9999,
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif'
+    }}>
+      <style>{`
+        @keyframes pulse {
+          0% { transform: scale(1); opacity: 0.9; }
+          50% { transform: scale(1.08); opacity: 1; }
+          100% { transform: scale(1); opacity: 0.9; }
+        }
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+        .splash-logo {
+          animation: pulse 2s infinite ease-in-out;
+          width: 80px;
+          height: 80px;
+          border-radius: 20px;
+          box-shadow: 0 12px 24px rgba(0, 0, 0, 0.25);
+          margin-bottom: 24px;
+        }
+        .splash-spinner {
+          width: 28px;
+          height: 28px;
+          border: 3px solid rgba(244, 245, 240, 0.2);
+          border-top: 3px solid #F4F5F0;
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+          margin-top: 32px;
+        }
+      `}</style>
+      <img src="/icon-192.png" alt="My Wallet Logo" className="splash-logo" />
+      <h1 style={{
+        fontSize: '28px',
+        fontWeight: 'bold',
+        margin: '0 0 8px 0',
+        letterSpacing: '-0.5px'
+      }}>My Wallet</h1>
+      <p style={{
+        fontSize: '14px',
+        opacity: 0.8,
+        margin: 0,
+        fontWeight: 500
+      }}>Cargando tus finanzas...</p>
+      <div className="splash-spinner"></div>
     </div>
   );
 }

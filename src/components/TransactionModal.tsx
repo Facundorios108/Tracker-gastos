@@ -25,7 +25,7 @@ export default function TransactionModal({
 
   const [step, setStep] = useState<'amount' | 'category' | 'description'>('amount');
   const [type, setType] = useState<'income' | 'expense'>(initialType);
-  const [currency, setCurrency] = useState<'ARS' | 'USD'>('ARS');
+  const [currency, setCurrency] = useState<'ARS' | 'USD' | 'EUR'>('ARS');
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState('');
   const [description, setDescription] = useState('');
@@ -87,13 +87,16 @@ export default function TransactionModal({
 
   const handleSubmit = async () => {
     if (!amount || !category) return;
+
+    const now = new Date();
+    const timeSuffix = `T${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
     
     // Construir objeto base sin campos undefined
     const transactionData: any = {
       amount: parseFloat(amount),
       category,
       description: description || getCategoryLabel(category),
-      date: new Date(date + 'T12:00:00').toISOString(),
+      date: new Date(date + timeSuffix).toISOString(),
       type,
       currency,
       exchangeRate: settings?.exchangeRate || 1000,
@@ -110,7 +113,7 @@ export default function TransactionModal({
         transactionData.creditCardId = creditCardId;
         const card = settings?.creditCards?.find(c => c.id === creditCardId);
         if (card) {
-          const tDate = new Date(date + 'T12:00:00');
+          const tDate = new Date(date + timeSuffix);
           let bYear = tDate.getFullYear();
           let bMonth = tDate.getMonth() + 1;
           
@@ -151,7 +154,7 @@ export default function TransactionModal({
 
         if (isSubscription) {
           // Crear suscripción con la fecha seleccionada por el usuario
-          const selectedDate = new Date(date + 'T12:00:00');
+          const selectedDate = new Date(date + timeSuffix);
           const dayOfMonth = selectedDate.getDate();
           
           const subscriptionData = {
@@ -166,7 +169,7 @@ export default function TransactionModal({
           
         } else if (hasInstallments) {
           // Crear primera cuota con la fecha seleccionada (monto dividido)
-          const selectedDate = new Date(date + 'T12:00:00');
+          const selectedDate = new Date(date + timeSuffix);
           const dayOfMonth = selectedDate.getDate();
           const installmentAmount = parseFloat(amount) / (installments as number);
           
@@ -266,11 +269,18 @@ export default function TransactionModal({
               >
                 <span>🇺🇸</span> DÓLARES
               </button>
+              <button 
+                type="button"
+                className={`currency-pill ${currency === 'EUR' ? 'active' : ''}`}
+                onClick={() => setCurrency('EUR')}
+              >
+                <span>🇪🇺</span> EUROS
+              </button>
             </div>
 
             <div className="amount-display-container">
               <div className="amount-display">
-                <span className="amount-currency">{currency === 'ARS' ? '$' : 'u$s'}</span>
+                <span className="amount-currency">{currency === 'EUR' ? '€' : currency === 'USD' ? 'u$s' : '$'}</span>
                 <span className="amount-value">{parseFloat(displayAmount).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: (displayAmount.includes('.') ? 2 : 0) })}</span>
               </div>
             </div>
@@ -394,34 +404,25 @@ export default function TransactionModal({
 
             {/* Mensaje informativo para suscripciones */}
             {category === 'subscriptions' && (
-              <div className="info-card" style={{
-                background: 'var(--color-primary-container)',
-                border: '1.5px solid var(--color-primary)',
-                borderRadius: '16px',
-                padding: '14px 16px',
-                marginBottom: '12px'
+              <div className="info-card animate-scale-in" style={{
+                background: 'rgba(99, 102, 241, 0.05)',
+                border: '1px solid rgba(99, 102, 241, 0.2)',
+                borderRadius: '12px',
+                padding: '10px 12px',
+                marginBottom: '16px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
               }}>
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
-                  <span style={{ fontSize: '18px', flexShrink: 0 }}>🔄</span>
-                  <div>
-                    <p style={{ 
-                      fontSize: 'calc(13px + var(--font-size-offset, 0px))',
-                      fontWeight: 700,
-                      color: 'var(--color-primary)',
-                      marginBottom: '4px'
-                    }}>
-                      Suscripción Recurrente
-                    </p>
-                    <p style={{ 
-                      fontSize: 'calc(12px + var(--font-size-offset, 0px))',
-                      color: 'var(--color-on-surface)',
-                      opacity: 0.8,
-                      lineHeight: 1.4
-                    }}>
-                      Solo se creará la suscripción de este mes. Los meses siguientes se generarán automáticamente cuando llegue cada nuevo mes.
-                    </p>
-                  </div>
-                </div>
+                <span style={{ fontSize: '14px', flexShrink: 0 }}>🔄</span>
+                <span style={{ 
+                  fontSize: 'calc(11.5px + var(--font-size-offset, 0px))',
+                  fontWeight: 600,
+                  color: 'var(--color-text-primary)',
+                  lineHeight: 1.3
+                }}>
+                  Se registrará como gasto recurrente todos los meses.
+                </span>
               </div>
             )}
 
@@ -499,7 +500,7 @@ export default function TransactionModal({
             <div className="transaction-summary-card">
               <div className="summary-main">
                 <div className="summary-amount">
-                  <span className="summary-currency">{currency === 'ARS' ? '$' : 'u$s'}</span>
+                  <span className="summary-currency">{currency === 'EUR' ? '€' : currency === 'USD' ? 'u$s' : '$'}</span>
                   <span className="summary-value">{parseFloat(amount).toLocaleString('es-AR')}</span>
                 </div>
                 <div className="summary-meta">

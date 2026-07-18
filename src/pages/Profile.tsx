@@ -18,11 +18,14 @@ export default function Profile() {
   const user = state?.user;
 
   const [exchangeRateInput, setExchangeRateInput] = useState(settings?.exchangeRate ? settings.exchangeRate.toLocaleString('es-AR') : '1.100');
+  const [exchangeRateEURInput, setExchangeRateEURInput] = useState(settings?.exchangeRateEUR ? settings.exchangeRateEUR.toLocaleString('es-AR') : '1.200');
   const [budgetInput, setBudgetInput] = useState(settings?.monthlyBudget ? settings.monthlyBudget.toLocaleString('es-AR') : '500.000');
 
   const [isEditingName, setIsEditingName] = useState(false);
   const getDisplayName = () => (settings?.name && settings.name !== 'Invitado') ? settings.name : (user?.displayName || user?.email?.split('@')[0] || '');
   const [newName, setNewName] = useState(getDisplayName());
+  const [calcInput, setCalcInput] = useState('');
+  const [calcFromCurrency, setCalcFromCurrency] = useState<'ARS' | 'USD' | 'EUR'>('USD');
 
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
@@ -57,10 +60,15 @@ export default function Profile() {
       }
       
       let amount = t.amount;
-      if (settings?.displayCurrency === 'USD' && t.currency === 'ARS') {
-        amount = amount / settings.exchangeRate;
-      } else if (settings?.displayCurrency === 'ARS' && t.currency === 'USD') {
-        amount = amount * settings.exchangeRate;
+      if (t.currency !== settings?.displayCurrency) {
+        // Convert to ARS base first
+        let amountARS = t.amount;
+        if (t.currency === 'USD') amountARS = t.amount * (settings?.exchangeRate || 1100);
+        if (t.currency === 'EUR') amountARS = t.amount * (settings?.exchangeRateEUR || 1200);
+        // Convert from ARS to display currency
+        if (settings?.displayCurrency === 'ARS') amount = amountARS;
+        else if (settings?.displayCurrency === 'USD') amount = amountARS / (settings?.exchangeRate || 1100);
+        else if (settings?.displayCurrency === 'EUR') amount = amountARS / (settings?.exchangeRateEUR || 1200);
       }
       
       if (t.type === 'income') {
@@ -74,7 +82,7 @@ export default function Profile() {
     });
     
     return Object.entries(groups).sort((a, b) => b[0].localeCompare(a[0]));
-  }, [state?.transactions, settings?.displayCurrency, settings?.exchangeRate]);
+  }, [state?.transactions, settings?.displayCurrency, settings?.exchangeRate, settings?.exchangeRateEUR]);
 
   // Group by year for UI display
   const historyByYear = useMemo(() => {
@@ -209,6 +217,12 @@ export default function Profile() {
     }
   }, [settings?.exchangeRate]);
 
+  useEffect(() => {
+    if (settings?.exchangeRateEUR) {
+      setExchangeRateEURInput(settings.exchangeRateEUR.toLocaleString('es-AR'));
+    }
+  }, [settings?.exchangeRateEUR]);
+
   const formatBudgetInput = (inputValue: string) => {
     let absoluteVal = inputValue;
     if (absoluteVal.endsWith('.')) {
@@ -230,12 +244,15 @@ export default function Profile() {
 
   useEffect(() => {
     if (settings?.monthlyBudget !== undefined && settings?.exchangeRate) {
-      const displayBudgetVal = settings.displayCurrency === 'USD'
-        ? (settings.monthlyBudget / settings.exchangeRate)
-        : settings.monthlyBudget;
+      let displayBudgetVal = settings.monthlyBudget;
+      if (settings.displayCurrency === 'USD') {
+        displayBudgetVal = settings.monthlyBudget / settings.exchangeRate;
+      } else if (settings.displayCurrency === 'EUR') {
+        displayBudgetVal = settings.monthlyBudget / (settings.exchangeRateEUR || 1200);
+      }
       setBudgetInput(displayBudgetVal.toLocaleString('es-AR', { maximumFractionDigits: 2 }));
     }
-  }, [settings?.monthlyBudget, settings?.displayCurrency, settings?.exchangeRate]);
+  }, [settings?.monthlyBudget, settings?.displayCurrency, settings?.exchangeRate, settings?.exchangeRateEUR]);
 
   useEffect(() => {
     setNewName(getDisplayName());
@@ -268,9 +285,12 @@ export default function Profile() {
     const cleanAmountStr = budgetInput.replace(/\./g, '').replace(',', '.');
     const budget = parseFloat(cleanAmountStr);
     if (!isNaN(budget) && budget >= 0) {
-      const budgetInBase = settings.displayCurrency === 'USD'
-        ? budget * settings.exchangeRate
-        : budget;
+      let budgetInBase = budget;
+      if (settings.displayCurrency === 'USD') {
+        budgetInBase = budget * settings.exchangeRate;
+      } else if (settings.displayCurrency === 'EUR') {
+        budgetInBase = budget * (settings.exchangeRateEUR || 1200);
+      }
       updateSettings({ monthlyBudget: budgetInBase });
     }
   };
@@ -391,6 +411,13 @@ export default function Profile() {
                 >
                   <span className="flag">🇺🇸</span>
                   <span className="code">USD</span>
+                </button>
+                <button 
+                  className={`currency-premium-btn ${settings.displayCurrency === 'EUR' ? 'active' : ''}`}
+                  onClick={() => updateSettings({ displayCurrency: 'EUR' })}
+                >
+                  <span className="flag">🇪🇺</span>
+                  <span className="code">EUR</span>
                 </button>
               </div>
             </div>
@@ -546,12 +573,39 @@ export default function Profile() {
 
             <div className="setup-card-glass bounce-effect">
               <div className="setup-card__header">
+                <Calculator size={14} />
+                <span>Valor Euro</span>
+              </div>
+              <div className="setup-card__body">
+                <div className="input-with-symbol">
+                  <span className="symbol">$</span>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={exchangeRateEURInput}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, '');
+                      setExchangeRateEURInput(val ? parseInt(val, 10).toLocaleString('es-AR') : '');
+                    }}
+                    onBlur={() => {
+                      const rate = parseFloat(exchangeRateEURInput.replace(/\./g, ''));
+                      if (!isNaN(rate) && rate > 0) {
+                        updateSettings({ exchangeRateEUR: rate });
+                      }
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="setup-card-glass bounce-effect">
+              <div className="setup-card__header">
                 <Wallet size={14} />
                 <span>Presupuesto</span>
               </div>
               <div className="setup-card__body">
                 <div className="input-with-symbol">
-                  <span className="symbol">{settings.displayCurrency === 'ARS' ? '$' : 'u$s'}</span>
+                  <span className="symbol">{settings.displayCurrency === 'EUR' ? '€' : settings.displayCurrency === 'USD' ? 'u$s' : '$'}</span>
                   <input
                     type="text"
                     inputMode="numeric"
@@ -566,17 +620,127 @@ export default function Profile() {
             </div>
 
             {/* Mis Tarjetas Button */}
-            <div className="setup-card-glass bounce-effect" onClick={() => setShowCardsModal(true)} style={{ cursor: 'pointer', marginTop: '16px' }}>
+            <div className="setup-card-glass bounce-effect" onClick={() => setShowCardsModal(true)} style={{ cursor: 'pointer' }}>
               <div className="setup-card__header">
                 <CreditCardIcon size={14} />
                 <span>Mis Tarjetas</span>
               </div>
               <div className="setup-card__body">
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-                  <span style={{ fontSize: '16px', fontWeight: 600 }}>{(settings?.creditCards || []).length} Registradas</span>
-                  <ChevronRight size={18} style={{ opacity: 0.5 }} />
+                <div className="input-with-symbol" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', cursor: 'pointer' }}>
+                  <span style={{ fontSize: '16px', fontWeight: 700, color: 'var(--color-on-surface)' }}>{(settings?.creditCards || []).length} Registradas</span>
+                  <ChevronRight size={18} style={{ opacity: 0.7, color: 'var(--color-primary)', marginRight: '-4px' }} />
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* Calculadora de Cotizaciones */}
+          <div className="settings-list-glass" style={{ marginTop: '16px' }}>
+            <div className="premium-settings-item" style={{ flexDirection: 'column', alignItems: 'stretch', gap: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div className="premium-settings-item__icon" style={{ color: 'var(--color-primary)' }}>
+                  <Calculator size={20} />
+                </div>
+                <div className="premium-settings-item__content">
+                  <span className="premium-settings-item__label">Calculadora de Cotizaciones</span>
+                  <p className="premium-settings-item__value">Convertí montos entre divisas al instante</p>
+                </div>
+              </div>
+              
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <div className="input-with-symbol" style={{ flex: 1 }}>
+                  <span className="symbol">{calcFromCurrency === 'ARS' ? '$' : calcFromCurrency === 'EUR' ? '€' : 'u$s'}</span>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="Monto"
+                    value={calcInput}
+                    onChange={(e) => {
+                      setCalcInput(formatBudgetInput(e.target.value));
+                    }}
+                  />
+                </div>
+                <select
+                  value={calcFromCurrency}
+                  onChange={(e) => setCalcFromCurrency(e.target.value as 'ARS' | 'USD' | 'EUR')}
+                  style={{
+                    padding: '12px',
+                    borderRadius: '12px',
+                    background: 'var(--color-glass)',
+                    border: '1px solid var(--color-glass-border)',
+                    color: 'var(--color-text-primary)',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    minWidth: '70px',
+                    outline: 'none'
+                  }}
+                >
+                  <option value="ARS">ARS</option>
+                  <option value="USD">USD</option>
+                  <option value="EUR">EUR</option>
+                </select>
+              </div>
+              
+              {calcInput && (() => {
+                const cleanAmountStr = calcInput.replace(/\./g, '').replace(',', '.');
+                const amount = parseFloat(cleanAmountStr);
+                if (isNaN(amount) || amount <= 0) return null;
+                
+                const rate = settings.exchangeRate || 1100;
+                const rateEUR = settings.exchangeRateEUR || 1200;
+                
+                let resultARS = 0, resultUSD = 0, resultEUR = 0;
+                if (calcFromCurrency === 'ARS') {
+                  resultARS = amount;
+                  resultUSD = amount / rate;
+                  resultEUR = amount / rateEUR;
+                } else if (calcFromCurrency === 'USD') {
+                  resultARS = amount * rate;
+                  resultUSD = amount;
+                  resultEUR = (amount * rate) / rateEUR;
+                } else {
+                  resultARS = amount * rateEUR;
+                  resultUSD = (amount * rateEUR) / rate;
+                  resultEUR = amount;
+                }
+                
+                return (
+                  <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '8px',
+                    padding: '16px',
+                    background: 'rgba(255,255,255,0.03)',
+                    borderRadius: '12px',
+                    border: '1px solid rgba(255,255,255,0.05)'
+                  }}>
+                    {calcFromCurrency !== 'ARS' && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '13px', opacity: 0.7 }}>🇦🇷 Pesos (ARS)</span>
+                        <span style={{ fontSize: '16px', fontWeight: 700 }}>
+                          {new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(resultARS)}
+                        </span>
+                      </div>
+                    )}
+                    {calcFromCurrency !== 'USD' && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '13px', opacity: 0.7 }}>🇺🇸 Dólares (USD)</span>
+                        <span style={{ fontSize: '16px', fontWeight: 700 }}>
+                          {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(resultUSD)}
+                        </span>
+                      </div>
+                    )}
+                    {calcFromCurrency !== 'EUR' && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '13px', opacity: 0.7 }}>🇪🇺 Euros (EUR)</span>
+                        <span style={{ fontSize: '16px', fontWeight: 700 }}>
+                          {new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(resultEUR)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           </div>
         </section>

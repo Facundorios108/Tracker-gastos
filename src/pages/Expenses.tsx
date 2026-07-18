@@ -337,7 +337,7 @@ export default function Expenses({ onEdit, initialFilters }: ExpensesProps) {
                       <div className="transaction-item__amount transaction-item__amount--expense">
                         -{formatCurrency(t.amount, t.currency)}
                       </div>
-                      {t.currency === 'USD' && <span className="currency-badge-premium">USD</span>}
+                      {t.currency !== 'ARS' && <span className="currency-badge-premium">{t.currency}</span>}
                     </div>
                     <div className="transaction-item__actions">
                       <button

@@ -23,7 +23,7 @@ export default function Goals() {
   const [showGoalForm, setShowGoalForm] = useState(false);
   const [goalTitle, setGoalTitle] = useState('');
   const [goalTarget, setGoalTarget] = useState('');
-  const [goalCurrency, setGoalCurrency] = useState<'ARS' | 'USD'>('ARS');
+  const [goalCurrency, setGoalCurrency] = useState<'ARS' | 'USD' | 'EUR'>('ARS');
   const [goalEmoji, setGoalEmoji] = useState(0);
   const [goalColor, setGoalColor] = useState(0);
   const [goalDeadline, setGoalDeadline] = useState('');
@@ -43,7 +43,7 @@ export default function Goals() {
   const [showFundForm, setShowFundForm] = useState(false);
   const [fundTitle, setFundTitle] = useState('');
   const [fundAmount, setFundAmount] = useState('');
-  const [fundCurrency, setFundCurrency] = useState<'ARS' | 'USD'>('ARS');
+  const [fundCurrency, setFundCurrency] = useState<'ARS' | 'USD' | 'EUR'>('ARS');
   const [fundEmoji, setFundEmoji] = useState(0);
   const [fundColor, setFundColor] = useState(0);
   const [editingFundId, setEditingFundId] = useState<string | null>(null);
@@ -270,7 +270,8 @@ export default function Goals() {
   const fundTotals = useMemo(() => {
     const ars = state.funds.filter(f => f.currency === 'ARS').reduce((s, f) => s + f.amount, 0);
     const usd = state.funds.filter(f => f.currency === 'USD').reduce((s, f) => s + f.amount, 0);
-    return { ars, usd };
+    const eur = state.funds.filter(f => f.currency === 'EUR').reduce((s, f) => s + f.amount, 0);
+    return { ars, usd, eur };
   }, [state.funds]);
 
   return (
@@ -351,9 +352,10 @@ export default function Goals() {
                     onChange={e => setGoalTarget(e.target.value)}
                   />
                   <select className="goal-form__select bounce-effect" value={goalCurrency}
-                    onChange={e => setGoalCurrency(e.target.value as 'ARS' | 'USD')}>
+                    onChange={e => setGoalCurrency(e.target.value as 'ARS' | 'USD' | 'EUR')}>
                     <option value="ARS">ARS</option>
                     <option value="USD">USD</option>
+                    <option value="EUR">EUR</option>
                   </select>
                 </div>
               </div>
@@ -524,6 +526,11 @@ export default function Goals() {
                       {formatCurrency(fundTotals.usd, 'USD')}
                     </span>
                   )}
+                  {fundTotals.eur > 0 && (
+                    <span className="fund-summary__value fund-summary__value--usd" style={{ color: '#6366f1', borderColor: '#6366f1' }}>
+                      {formatCurrency(fundTotals.eur, 'EUR')}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -546,9 +553,10 @@ export default function Goals() {
                     placeholder="0" value={fundAmount}
                     onChange={e => setFundAmount(formatNumberWithSeparators(e.target.value))} />
                   <select className="goal-form__select bounce-effect" value={fundCurrency}
-                    onChange={e => setFundCurrency(e.target.value as 'ARS' | 'USD')}>
+                    onChange={e => setFundCurrency(e.target.value as 'ARS' | 'USD' | 'EUR')}>
                     <option value="ARS">ARS</option>
                     <option value="USD">USD</option>
+                    <option value="EUR">EUR</option>
                   </select>
                 </div>
               </div>
