@@ -78,8 +78,20 @@ export default function Dashboard({ onNavigate, onEdit }: DashboardProps) {
     <div className="dashboard">
       {/* Quick Budget Edit Modal */}
       {isEditingBudget && (
-        <div className="modal-backdrop" onClick={() => setIsEditingBudget(false)}>
-          <div className="modal-sheet animate-slide-up" onClick={e => e.stopPropagation()}>
+        <div 
+          className="modal-backdrop" 
+          onClick={() => setIsEditingBudget(false)}
+          style={{ alignItems: 'flex-start', paddingTop: '80px' }}
+        >
+          <div 
+            className="modal-sheet animate-slide-up" 
+            onClick={e => e.stopPropagation()}
+            style={{ 
+              borderRadius: '28px', 
+              margin: '0 16px', 
+              width: 'calc(100% - 32px)' 
+            }}
+          >
             <div className="modal-header">
               <div style={{ width: 40 }} />
               <h3 className="modal-content__title">Presupuesto Mensual</h3>
