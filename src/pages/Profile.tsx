@@ -389,7 +389,7 @@ export default function Profile() {
               </div>
             </button>
 
-            <div className="premium-settings-item">
+            <div className="premium-settings-item premium-settings-item--has-toggle">
               <div className="premium-settings-item__icon currency-icon">
                 <DollarSign size={20} />
               </div>
@@ -478,7 +478,7 @@ export default function Profile() {
               </div>
             </div>
 
-            <div className="premium-settings-item">
+            <div className="premium-settings-item premium-settings-item--has-toggle">
               <div className="premium-settings-item__icon" style={{ color: 'var(--color-text-secondary)' }}>
                 <Type size={20} />
               </div>
@@ -627,7 +627,7 @@ export default function Profile() {
               </div>
               <div className="setup-card__body">
                 <div className="input-with-symbol" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', cursor: 'pointer' }}>
-                  <span style={{ fontSize: '16px', fontWeight: 700, color: 'var(--color-on-surface)' }}>{(settings?.creditCards || []).length} Registradas</span>
+                  <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-on-surface)', whiteSpace: 'nowrap' }}>{(settings?.creditCards || []).length} Registradas</span>
                   <ChevronRight size={18} style={{ opacity: 0.7, color: 'var(--color-primary)', marginRight: '-4px' }} />
                 </div>
               </div>

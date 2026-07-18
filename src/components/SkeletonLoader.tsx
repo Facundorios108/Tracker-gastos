@@ -5,13 +5,15 @@ export default function SkeletonLoader() {
       flexDirection: 'column',
       alignItems: 'center',
       justifyContent: 'center',
-      height: '100vh',
-      width: '100vw',
+      height: '100%',
+      width: '100%',
       background: 'linear-gradient(135deg, #1B6B4F 0%, #0d3a2b 100%)',
       color: '#F4F5F0',
       position: 'fixed',
       top: 0,
       left: 0,
+      right: 0,
+      bottom: 0,
       zIndex: 9999,
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif'
     }}>

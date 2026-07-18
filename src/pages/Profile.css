@@ -499,3 +499,22 @@
   background: var(--color-surface-container-high);
 }
 
+@media (max-width: 600px) {
+  .premium-settings-item--has-toggle {
+    flex-wrap: wrap !important;
+    gap: 12px !important;
+  }
+  .premium-settings-item--has-toggle .premium-settings-item__content {
+    min-width: 150px !important;
+    flex: 1 !important;
+  }
+  .premium-settings-item--has-toggle .currency-premium-toggle {
+    width: 100% !important;
+    margin-top: 4px !important;
+  }
+  .premium-settings-item--has-toggle .currency-premium-btn {
+    flex: 1 !important;
+    justify-content: center !important;
+  }
+}
+
