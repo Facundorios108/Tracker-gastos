@@ -1,5 +1,6 @@
 import { createContext, useContext, useReducer, useEffect, useState, type ReactNode } from 'react';
 import type { Transaction, SavingsGoal, FundAllocation, UserSettings } from '../types';
+import { parseTransactionDate } from '../utils';
 
 export interface ToastMessage {
   id: string;
@@ -1040,7 +1041,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (t.billingMonth) {
       return t.billingMonth === currentMonthString;
     }
-    const d = new Date(t.date);
+    const d = parseTransactionDate(t.date);
     return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
   });
 

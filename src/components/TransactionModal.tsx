@@ -3,6 +3,7 @@ import { X, ChevronLeft, Calendar, Tag, FileText, CreditCard, Banknote, Landmark
 import { useApp } from '../context/AppContext';
 import { CATEGORIES, type CategoryConfig, getCategoryConfig } from '../types';
 import type { Transaction } from '../types';
+import { getTodayLocalDateStr } from '../utils';
 import './TransactionModal.css';
 
 interface TransactionModalProps {
@@ -29,7 +30,7 @@ export default function TransactionModal({
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState('');
   const [description, setDescription] = useState('');
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [date, setDate] = useState(getTodayLocalDateStr());
   const [paymentMethod, setPaymentMethod] = useState<'credit' | 'debit' | 'cash' | 'transfer'>('cash');
   const [creditCardId, setCreditCardId] = useState<string>('');
   const [notes, setNotes] = useState('');
@@ -45,7 +46,7 @@ export default function TransactionModal({
         setAmount(editingTransaction.amount.toString());
         setCategory(editingTransaction.category);
         setDescription(editingTransaction.description);
-        setDate(new Date(editingTransaction.date).toISOString().split('T')[0]);
+        setDate(editingTransaction.date.split('T')[0]);
         setPaymentMethod(editingTransaction.paymentMethod || 'cash');
         setCreditCardId(editingTransaction.creditCardId || '');
         setNotes(editingTransaction.notes || '');
@@ -56,7 +57,7 @@ export default function TransactionModal({
         setAmount('');
         setCategory('');
         setDescription('');
-        setDate(new Date().toISOString().split('T')[0]);
+        setDate(getTodayLocalDateStr());
         setPaymentMethod(prefilledData?.paymentMethod || 'cash');
         setCreditCardId(prefilledData?.creditCardId || '');
         setNotes('');
