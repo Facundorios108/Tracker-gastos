@@ -447,24 +447,29 @@
 .currency-premium-selector {
   display: flex;
   background: var(--color-surface-container-low);
-  padding: 6px;
+  padding: 4px;
   border-radius: 18px;
-  gap: 8px;
-  margin: 0 auto 8px;
-  width: fit-content;
+  gap: 4px;
+  margin: 0 auto 12px;
+  width: 100%;
+  max-width: 360px;
+  box-sizing: border-box;
   border: 1px solid var(--color-outline-variant);
 }
 
 .currency-pill {
+  flex: 1;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 20px;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 10px;
   border-radius: 14px;
-  font-size: calc(12px + var(--font-size-offset, 0px));
+  font-size: calc(11.5px + var(--font-size-offset, 0px));
   font-weight: 800;
   color: var(--color-text-tertiary);
   transition: all 0.3s ease;
+  white-space: nowrap;
 }
 
 .currency-pill.active {

@@ -536,9 +536,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return () => clearTimeout(timeoutId);
   }, [state.transactions.length, state.user?.uid]);
 
+  const cleanForFirestore = <T,>(obj: T): T => {
+    return JSON.parse(JSON.stringify(obj));
+  };
+
   const addTransaction = async (t: Omit<Transaction, 'id'>) => {
     const id = state.user ? doc(collection(db, 'users', state.user.uid, 'transactions')).id : crypto.randomUUID();
-    const newTransaction = { ...t, id };
+    const newTransaction = cleanForFirestore({ ...t, id });
     
     console.log('📝 Agregando nueva transacción:', {
       id,
@@ -579,10 +583,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       userId: state.user?.uid
     });
 
+    const cleanData = cleanForFirestore(t);
+
     if (state.user) {
       try {
         console.log('💾 Guardando actualización en Firebase...');
-        await setDoc(doc(db, 'users', state.user.uid, 'transactions', t.id), t, { merge: true });
+        await setDoc(doc(db, 'users', state.user.uid, 'transactions', t.id), cleanData, { merge: true });
         console.log('✅ Transacción actualizada exitosamente en Firebase:', t.id);
         showToast('Movimiento actualizado con éxito', 'success');
       } catch (err) {
@@ -592,7 +598,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
     } else {
       // Modo invitado: actualizamos localStorage
-      const newTransactions = state.transactions.map(tr => tr.id === t.id ? t : tr);
+      const newTransactions = state.transactions.map(tr => tr.id === t.id ? cleanData : tr);
       dispatch({ type: 'SET_TRANSACTIONS', payload: newTransactions });
       localStorage.setItem('app_transactions', JSON.stringify(newTransactions));
       showToast('Movimiento actualizado con éxito (invitado)', 'success');
@@ -623,14 +629,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const addGoal = async (g: SavingsGoal) => {
-    const newGoals = [...state.goals, g];
+    const cleanG = cleanForFirestore(g);
+    const newGoals = [...state.goals, cleanG];
     dispatch({ type: 'SET_GOALS', payload: newGoals });
     localStorage.setItem('app_goals', JSON.stringify(newGoals));
     showToast(`Meta "${g.title}" creada con éxito`, 'success');
 
     if (state.user) {
       try {
-        await setDoc(doc(db, 'users', state.user.uid, 'goals', g.id), g);
+        await setDoc(doc(db, 'users', state.user.uid, 'goals', g.id), cleanG);
       } catch (err) {
         console.error("Firebase sync error:", err);
       }
@@ -638,14 +645,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const updateGoal = async (g: SavingsGoal) => {
-    const newGoals = state.goals.map(goal => goal.id === g.id ? g : goal);
+    const cleanG = cleanForFirestore(g);
+    const newGoals = state.goals.map(goal => goal.id === g.id ? cleanG : goal);
     dispatch({ type: 'SET_GOALS', payload: newGoals });
     localStorage.setItem('app_goals', JSON.stringify(newGoals));
     showToast(`Meta "${g.title}" actualizada`, 'success');
 
     if (state.user) {
       try {
-        await setDoc(doc(db, 'users', state.user.uid, 'goals', g.id), g, { merge: true });
+        await setDoc(doc(db, 'users', state.user.uid, 'goals', g.id), cleanG, { merge: true });
       } catch (err) {
         console.error("Firebase sync error:", err);
       }
@@ -684,7 +692,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (goal) {
         const newAmount = Math.max(0, goal.currentAmount + amount);
         try {
-          await setDoc(doc(db, 'users', state.user.uid, 'goals', goal.id), { currentAmount: newAmount }, { merge: true });
+          await setDoc(doc(db, 'users', state.user.uid, 'goals', goal.id), cleanForFirestore({ currentAmount: newAmount }), { merge: true });
         } catch (err) {
           console.error("Firebase sync error:", err);
         }
@@ -693,13 +701,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const addFund = async (f: FundAllocation) => {
-    const newFunds = [...state.funds, f];
+    const cleanF = cleanForFirestore(f);
+    const newFunds = [...state.funds, cleanF];
     dispatch({ type: 'SET_FUNDS', payload: newFunds });
     localStorage.setItem('app_funds', JSON.stringify(newFunds));
 
     if (state.user) {
       try {
-        await setDoc(doc(db, 'users', state.user.uid, 'funds', f.id), f);
+        await setDoc(doc(db, 'users', state.user.uid, 'funds', f.id), cleanF);
       } catch (err) {
         console.error("Firebase sync error:", err);
       }
@@ -707,13 +716,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const updateFund = async (f: FundAllocation) => {
-    const newFunds = state.funds.map(fund => fund.id === f.id ? f : fund);
+    const cleanF = cleanForFirestore(f);
+    const newFunds = state.funds.map(fund => fund.id === f.id ? cleanF : fund);
     dispatch({ type: 'SET_FUNDS', payload: newFunds });
     localStorage.setItem('app_funds', JSON.stringify(newFunds));
 
     if (state.user) {
       try {
-        await setDoc(doc(db, 'users', state.user.uid, 'funds', f.id), f, { merge: true });
+        await setDoc(doc(db, 'users', state.user.uid, 'funds', f.id), cleanF, { merge: true });
       } catch (err) {
         console.error("Firebase sync error:", err);
       }

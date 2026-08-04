@@ -414,7 +414,14 @@ export default function Goals() {
                       <span className="goal-card__emoji">{goal.emoji}</span>
                     </div>
                     <div className="goal-card__info">
-                      <h3 className="goal-card__title">{goal.title}</h3>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                        <h3 className="goal-card__title">{goal.title}</h3>
+                        {isComplete && (
+                          <span className="goal-complete-pill animate-scale-in">
+                            🎯 ¡Meta cumplida!
+                          </span>
+                        )}
+                      </div>
                       <div className="goal-card__amounts">
                         <span className="goal-card__current">{formatCurrency(goal.currentAmount, displayCurrency)}</span>
                         <span className="goal-card__target"> de {formatCurrency(goal.targetAmount, displayCurrency)}</span>
@@ -464,12 +471,6 @@ export default function Goals() {
                           <PiggyBank size={18} style={{ color: goal.color }} />
                           {isComplete ? 'Ajustar saldo' : 'Ahorrar ahora'}
                         </button>
-                        {isComplete && (
-                          <div className="goal-complete-badge"
-                            style={{ color: 'var(--color-primary)', fontWeight: 700, fontSize: '13px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <Target size={16} /> ¡Meta cumplida!
-                          </div>
-                        )}
                         <button className="goal-card__delete-btn bounce-effect"
                           onClick={() => handleEditGoal(goal)} aria-label="Editar"
                           style={{ marginRight: '8px', color: 'var(--color-text-secondary)' }}>
