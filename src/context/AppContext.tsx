@@ -555,23 +555,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
       userId: state.user?.uid
     });
 
+    // Actualización local optimista inmediata
+    const newTransactions = [newTransaction, ...state.transactions];
+    dispatch({ type: 'SET_TRANSACTIONS', payload: newTransactions });
+    localStorage.setItem('app_transactions', JSON.stringify(newTransactions));
+    showToast(newTransaction.type === 'income' ? 'Ingreso registrado con éxito' : 'Gasto registrado con éxito', 'success');
+
     if (state.user) {
       try {
-        console.log('💾 Guardando en Firebase...');
+        console.log('💾 Sincronizando transacción en Firebase...');
         await setDoc(doc(db, 'users', state.user.uid, 'transactions', id), newTransaction);
         console.log('✅ Transacción guardada exitosamente en Firebase:', id);
-        showToast(newTransaction.type === 'income' ? 'Ingreso registrado con éxito' : 'Gasto registrado con éxito', 'success');
       } catch (err) {
-        console.error("❌ Error guardando en Firebase:", err);
-        showToast('Error al registrar el movimiento', 'error');
-        throw err;
+        console.error("⚠️ Error de sincronización en Firebase (se mantiene copia local):", err);
       }
-    } else {
-      // Modo invitado: actualizamos localStorage
-      const newTransactions = [newTransaction, ...state.transactions];
-      dispatch({ type: 'SET_TRANSACTIONS', payload: newTransactions });
-      localStorage.setItem('app_transactions', JSON.stringify(newTransactions));
-      showToast(newTransaction.type === 'income' ? 'Ingreso registrado con éxito (invitado)' : 'Gasto registrado con éxito (invitado)', 'success');
     }
   };
 
@@ -585,46 +582,40 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     const cleanData = cleanForFirestore(t);
 
+    // Actualización local optimista inmediata
+    const newTransactions = state.transactions.map(tr => tr.id === t.id ? cleanData : tr);
+    dispatch({ type: 'SET_TRANSACTIONS', payload: newTransactions });
+    localStorage.setItem('app_transactions', JSON.stringify(newTransactions));
+    showToast('Movimiento actualizado con éxito', 'success');
+
     if (state.user) {
       try {
-        console.log('💾 Guardando actualización en Firebase...');
+        console.log('💾 Sincronizando actualización en Firebase...');
         await setDoc(doc(db, 'users', state.user.uid, 'transactions', t.id), cleanData, { merge: true });
         console.log('✅ Transacción actualizada exitosamente en Firebase:', t.id);
-        showToast('Movimiento actualizado con éxito', 'success');
       } catch (err) {
-        console.error("❌ Error actualizando en Firebase:", err);
-        showToast('Error al actualizar el movimiento', 'error');
-        throw err;
+        console.error("⚠️ Error de sincronización en Firebase (se mantiene copia local):", err);
       }
-    } else {
-      // Modo invitado: actualizamos localStorage
-      const newTransactions = state.transactions.map(tr => tr.id === t.id ? cleanData : tr);
-      dispatch({ type: 'SET_TRANSACTIONS', payload: newTransactions });
-      localStorage.setItem('app_transactions', JSON.stringify(newTransactions));
-      showToast('Movimiento actualizado con éxito (invitado)', 'success');
     }
   };
 
   const deleteTransaction = async (id: string) => {
     console.log('🗑️ Eliminando transacción:', id);
 
+    // Actualización local optimista inmediata
+    const newTransactions = state.transactions.filter(t => t.id !== id);
+    dispatch({ type: 'SET_TRANSACTIONS', payload: newTransactions });
+    localStorage.setItem('app_transactions', JSON.stringify(newTransactions));
+    showToast('Movimiento eliminado con éxito', 'success');
+
     if (state.user) {
       try {
         console.log('💾 Eliminando de Firebase...');
         await deleteDoc(doc(db, 'users', state.user.uid, 'transactions', id));
         console.log('✅ Transacción eliminada exitosamente de Firebase:', id);
-        showToast('Movimiento eliminado con éxito', 'success');
       } catch (err) {
-        console.error("❌ Error eliminando de Firebase:", err);
-        showToast('Error al eliminar el movimiento', 'error');
-        throw err;
+        console.error("⚠️ Error de eliminación en Firebase (se mantiene copia local):", err);
       }
-    } else {
-      // Modo invitado: actualizamos localStorage
-      const newTransactions = state.transactions.filter(tr => tr.id !== id);
-      dispatch({ type: 'SET_TRANSACTIONS', payload: newTransactions });
-      localStorage.setItem('app_transactions', JSON.stringify(newTransactions));
-      showToast('Movimiento eliminado con éxito (invitado)', 'success');
     }
   };
 
