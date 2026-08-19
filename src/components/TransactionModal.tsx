@@ -58,13 +58,13 @@ export default function TransactionModal({
         setCategory('');
         setDescription('');
         setDate(getTodayLocalDateStr());
-        setPaymentMethod(prefilledData?.paymentMethod || 'cash');
+        setPaymentMethod(prefilledData?.creditCardId ? 'credit' : (prefilledData?.paymentMethod || 'cash'));
         setCreditCardId(prefilledData?.creditCardId || '');
         setNotes('');
         setInstallments('');
       }
     }
-  }, [isOpen, initialType, editingTransaction]);
+  }, [isOpen, initialType, editingTransaction, prefilledData]);
 
   const filteredCategories = CATEGORIES.filter(c => c.type === type || c.type === 'both');
 
@@ -88,6 +88,11 @@ export default function TransactionModal({
 
   const handleSubmit = async () => {
     if (!amount || !category) return;
+    
+    // Validar que se seleccionó tarjeta si el método de pago es crédito
+    if (type === 'expense' && paymentMethod === 'credit' && !creditCardId && settings?.creditCards && settings.creditCards.length > 0) {
+      return; // No permitir guardar sin seleccionar tarjeta
+    }
 
     const now = new Date();
     const timeSuffix = `T${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
@@ -97,7 +102,11 @@ export default function TransactionModal({
       amount: parseFloat(amount),
       category,
       description: description || getCategoryLabel(category),
-      date: new Date(date + timeSuffix).toISOString(),
+      date: (() => {
+        const [y, m, d] = date.split('-').map(Number);
+        const now = new Date();
+        return new Date(y, m - 1, d, now.getHours(), now.getMinutes(), now.getSeconds()).toISOString();
+      })(),
       type,
       currency,
       exchangeRate: settings?.exchangeRate || 1000,
@@ -127,6 +136,10 @@ export default function TransactionModal({
           }
           transactionData.billingMonth = `${bYear}-${String(bMonth).padStart(2, '0')}`;
         }
+      } else {
+        // Limpiar campos de tarjeta de crédito explícitamente
+        transactionData.creditCardId = null;
+        transactionData.billingMonth = null;
       }
     }
 
@@ -141,7 +154,7 @@ export default function TransactionModal({
       setIsLoading(true);
       
       if (editingTransaction) {
-        updateTransaction({
+        await updateTransaction({
           ...editingTransaction,
           ...transactionData,
         });
@@ -236,13 +249,13 @@ export default function TransactionModal({
           <div className="modal-header__type-toggle">
             <button
               className={`type-btn bounce-effect ${type === 'expense' ? 'type-btn--active type-btn--expense' : ''}`}
-              onClick={() => setType('expense')}
+              onClick={() => { setType('expense'); setCategory(''); }}
             >
               Gasto
             </button>
             <button
               className={`type-btn bounce-effect ${type === 'income' ? 'type-btn--active type-btn--income' : ''}`}
-              onClick={() => setType('income')}
+              onClick={() => { setType('income'); setCategory(''); }}
             >
               Ingreso
             </button>

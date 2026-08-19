@@ -14,7 +14,7 @@ function getStatementKey(dateStr: string, closingDay: number) {
   // Use local time for correct day extraction
   const dateParts = dateStr.split('T')[0].split('-');
   const year = parseInt(dateParts[0], 10);
-  const month = parseInt(dateParts[1], 10) - 1; // 0-indexed
+  const month = parseInt(dateParts[1], 10); // 1-indexed to match billingMonth format
   const day = parseInt(dateParts[2], 10);
   
   let sMonth = month;
@@ -22,8 +22,8 @@ function getStatementKey(dateStr: string, closingDay: number) {
 
   if (day > closingDay) {
     sMonth += 1;
-    if (sMonth > 11) {
-      sMonth = 0;
+    if (sMonth > 12) {
+      sMonth = 1;
       sYear += 1;
     }
   }
@@ -33,7 +33,7 @@ function getStatementKey(dateStr: string, closingDay: number) {
 
 function formatStatementKey(key: string) {
   const [year, month] = key.split('-');
-  const date = new Date(parseInt(year), parseInt(month), 1);
+  const date = new Date(parseInt(year), parseInt(month) - 1, 1); // month is 1-indexed in key, Date expects 0-indexed
   const monthName = date.toLocaleDateString('es-AR', { month: 'long' });
   return `Resumen - ${monthName.charAt(0).toUpperCase() + monthName.slice(1)} ${year}`;
 }

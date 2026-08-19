@@ -193,7 +193,8 @@ export default function Profile() {
       last4: cardLast4,
       closingDate: Number(cardClosing),
       dueDate: Number(cardDue),
-      color: cardColor
+      color: cardColor,
+      ...(editingCard?.paidMonths ? { paidMonths: editingCard.paidMonths } : {})
     };
     
     const updatedCards = editingCard
@@ -1029,7 +1030,7 @@ export default function Profile() {
                       <option value="mastercard">Mastercard</option>
                       <option value="amex">American Express</option>
                       <option value="naranja">Naranja</option>
-                      <option value="otra">Otra</option>
+                      <option value="otro">Otra</option>
                     </select>
                   </div>
                   

@@ -1,4 +1,4 @@
-import { createContext, useContext, useReducer, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useContext, useReducer, useEffect, useState, useRef, type ReactNode } from 'react';
 import type { Transaction, SavingsGoal, FundAllocation, UserSettings } from '../types';
 import { parseTransactionDate } from '../utils';
 
@@ -61,13 +61,11 @@ const defaultState: AppState = {
   isLoading: true,
 };
 
-let pendingSettings: Partial<UserSettings> = {};
-let settingsSaveTimeout: any = null;
-
 /* ── Actions ── */
 
 type Action =
   | { type: 'SET_TRANSACTIONS'; payload: Transaction[] }
+  | { type: 'ADD_TRANSACTION'; payload: Transaction }
   | { type: 'SET_GOALS'; payload: SavingsGoal[] }
   | { type: 'SET_FUNDS'; payload: FundAllocation[] }
   | { type: 'SET_SETTINGS'; payload: Partial<UserSettings> }
@@ -80,6 +78,8 @@ function reducer(state: AppState, action: Action): AppState {
   switch (action.type) {
     case 'SET_TRANSACTIONS':
       return { ...state, transactions: action.payload };
+    case 'ADD_TRANSACTION':
+      return { ...state, transactions: [action.payload, ...state.transactions.filter(t => t.id !== action.payload.id)] };
     case 'SET_GOALS':
       return { ...state, goals: action.payload };
     case 'SET_FUNDS':
@@ -143,6 +143,7 @@ const AppContext = createContext<AppContextType | null>(null);
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, defaultState);
+  const settingsWriteInFlight = useRef(false);
 
   const [authResolved, setAuthResolved] = useState(false);
   const [listenersFired, setListenersFired] = useState({
@@ -213,15 +214,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
             
             const promises: Promise<void>[] = [];
             for (const t of guestTransactions) {
-              promises.push(setDoc(doc(db, 'users', currentUid, 'transactions', t.id), t, { merge: true }));
+              promises.push(setDoc(doc(db, 'users', currentUid, 'transactions', t.id), cleanForFirestore(t), { merge: true }));
             }
             for (const g of guestGoals) {
-              promises.push(setDoc(doc(db, 'users', currentUid, 'goals', g.id), g, { merge: true }));
+              promises.push(setDoc(doc(db, 'users', currentUid, 'goals', g.id), cleanForFirestore(g), { merge: true }));
             }
             for (const f of guestFunds) {
-              promises.push(setDoc(doc(db, 'users', currentUid, 'funds', f.id), f, { merge: true }));
+              promises.push(setDoc(doc(db, 'users', currentUid, 'funds', f.id), cleanForFirestore(f), { merge: true }));
             }
-            promises.push(setDoc(doc(db, 'users', currentUid), { settings: guestSettings }, { merge: true }));
+            promises.push(setDoc(doc(db, 'users', currentUid), { settings: cleanForFirestore(guestSettings) }, { merge: true }));
 
             try {
               await Promise.all(promises);
@@ -252,14 +253,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
       // Listen to Settings
       const settingsRef = doc(db, 'users', currentUid);
       const unsubSettings = onSnapshot(settingsRef, (docSnap) => {
-        if (docSnap.exists()) {
+        if (!settingsWriteInFlight.current && docSnap.exists()) {
           const data = docSnap.data();
           const merged = { ...defaultSettings, ...data.settings };
           localStorage.setItem('app_settings', JSON.stringify(merged));
           dispatch({ type: 'SET_SETTINGS', payload: merged });
-        } else {
+        } else if (!docSnap.exists()) {
           // Init default settings in Firestore if new user
-          setDoc(settingsRef, { settings: defaultSettings }, { merge: true });
+          setDoc(settingsRef, { settings: cleanForFirestore(defaultSettings) }, { merge: true });
         }
         setListenersFired(prev => ({ ...prev, settings: true }));
       }, (error) => {
@@ -556,9 +557,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       userId: state.user?.uid
     });
 
-    // Actualización local optimista inmediata
-    const newTransactions = [newTransaction, ...state.transactions];
-    dispatch({ type: 'SET_TRANSACTIONS', payload: newTransactions });
+    // Actualización local optimista inmediata usando acción específica
+    dispatch({ type: 'ADD_TRANSACTION', payload: newTransaction });
+    const newTransactions = [newTransaction, ...state.transactions.filter(tr => tr.id !== id)];
     localStorage.setItem('app_transactions', JSON.stringify(newTransactions));
     showToast(newTransaction.type === 'income' ? 'Ingreso registrado con éxito' : 'Gasto registrado con éxito', 'success');
 
@@ -737,30 +738,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const updateSettings = async (nextSettings: Partial<UserSettings>) => {
-    pendingSettings = { ...pendingSettings, ...nextSettings };
+    const fullSettings = cleanForFirestore({ ...state.settings, ...nextSettings });
     
-    // Optimistic local update
+    // Actualización local optimista inmediata
     dispatch({ type: 'SET_SETTINGS', payload: nextSettings });
-    
-    // Note: We don't write to localStorage here because the reducer state isn't available synchronously.
-    // The onSnapshot listener will update localStorage when the DB updates.
-    // If we wanted to, we could read current localStorage and merge, but it's not strictly necessary.
+    try {
+      localStorage.setItem('app_settings', JSON.stringify(fullSettings));
+    } catch (e) {}
 
     if (state.user) {
-      if (settingsSaveTimeout) clearTimeout(settingsSaveTimeout);
-      settingsSaveTimeout = setTimeout(() => {
-        const settingsToSave = { ...pendingSettings };
-        pendingSettings = {};
-        setDoc(doc(db, 'users', state.user.uid), { settings: settingsToSave }, { merge: true })
-          .catch(err => console.error("Firebase sync error:", err));
-      }, 1000);
-    } else {
-      // For guest mode, we must update localStorage immediately
+      settingsWriteInFlight.current = true;
       try {
-        const local = localStorage.getItem('app_settings');
-        const current = local ? JSON.parse(local) : defaultSettings;
-        localStorage.setItem('app_settings', JSON.stringify({ ...current, ...nextSettings }));
-      } catch (e) {}
+        await setDoc(doc(db, 'users', state.user.uid), { settings: fullSettings }, { merge: true });
+      } catch (err) {
+        console.error("Firebase sync error actualizando settings:", err);
+      } finally {
+        setTimeout(() => {
+          settingsWriteInFlight.current = false;
+        }, 500);
+      }
     }
   };
 
@@ -812,9 +808,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       console.log('🔄 Eliminando', deletePromises.length, 'documentos...');
       await Promise.all(deletePromises);
       
-      // Reset settings to default
+      // Reset settings to default (sin merge para eliminar campos como creditCards)
       console.log('⚙️ Reseteando configuración a valores predeterminados...');
-      await setDoc(doc(db, 'users', userId), { settings: defaultSettings }, { merge: true });
+      await setDoc(doc(db, 'users', userId), { settings: cleanForFirestore(defaultSettings) });
       
       // Limpiar localStorage
       localStorage.removeItem('app_transactions');
